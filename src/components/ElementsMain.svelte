@@ -1,11 +1,41 @@
 <script>
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { elements, combinations, generationStore } from '$lib/stores.js';
 	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
 
 	let selectedElements = [];
 	let result = '';
 	let randomGenerationCount = 10;
+
+	onMount(() => {
+		if (browser) {
+			// Load data from localStorage
+			const storedElements = localStorage.getItem('elements');
+			const storedCombinations = localStorage.getItem('combinations');
+
+			if (storedElements) {
+				elements.set(JSON.parse(storedElements));
+			}
+			if (storedCombinations) {
+				combinations.set(JSON.parse(storedCombinations));
+			}
+
+			// Subscribe to stores and update localStorage when they change
+			const unsubscribeElements = elements.subscribe((value) => {
+				localStorage.setItem('elements', JSON.stringify(value));
+			});
+
+			const unsubscribeCombinations = combinations.subscribe((value) => {
+				localStorage.setItem('combinations', JSON.stringify(value));
+			});
+
+			return () => {
+				unsubscribeElements();
+				unsubscribeCombinations();
+			};
+		}
+	});
 
 	function selectElement(element) {
 		if (selectedElements.length < 2) {
@@ -31,6 +61,8 @@
 		}
 	}
 </script>
+
+<!-- The rest of the HTML remains the same -->
 
 <div class="container mx-auto px-4 py-8 max-w-4xl">
 	<h1 class="text-4xl font-bold text-center mb-8 text-indigo-600">Infinite Craft</h1>
