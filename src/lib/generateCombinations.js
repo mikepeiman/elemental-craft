@@ -1,43 +1,63 @@
 import { get } from 'svelte/store';
-import { elements, combinations } from './stores.js';
+import { elements, combinations, generationStore } from './stores.js';
 
-export async function generateCombinations(initialElements, targetCount) {
-  const generatedCombinations = new Map();
-  const elementSet = new Set(initialElements);
+export async function generateCombination(element1, element2) {
+  const key = [element1, element2].sort().join(',');
+  const existingCombination = get(combinations)[key];
 
-  while (generatedCombinations.size < targetCount) {
-    const elementArray = Array.from(elementSet);
+  if (existingCombination) {
+    return existingCombination;
+  }
+
+  try {
+    const response = await fetch('/api/generate-combinations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ element1, element2 })
+    });
+
+    if (response.ok) {
+      const { combination } = await response.json();
+
+      // Update stores
+      combinations.update(c => ({ ...c, [key]: combination }));
+      elements.update(e => {
+        if (!e.includes(combination)) {
+          return [...e, combination];
+        }
+        return e;
+      });
+
+      console.log(`Generated: ${element1} + ${element2} = ${combination}`);
+      return combination;
+    }
+  } catch (error) {
+    console.error('Error generating combination:', error);
+  }
+
+  return null;
+}
+
+export async function generateRandomCombinations(count) {
+  generationStore.startGeneration();
+
+  for (let i = 0; i < count; i++) {
+    const generationState = get(generationStore);
+    if (generationState.shouldStop) {
+      break;
+    }
+
+    const elementArray = get(elements);
     const element1 = elementArray[Math.floor(Math.random() * elementArray.length)];
     const element2 = elementArray[Math.floor(Math.random() * elementArray.length)];
 
     if (element1 !== element2) {
-      const key = [element1, element2].sort().join(',');
-
-      if (!generatedCombinations.has(key)) {
-        try {
-          const response = await fetch('/api/generate-combinations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ element1, element2 })
-          });
-
-          if (response.ok) {
-            const { combination } = await response.json();
-            generatedCombinations.set(key, combination);
-            elementSet.add(combination);
-
-            // Update stores
-            combinations.update(c => ({ ...c, [key]: combination }));
-            elements.update(e => [...e, combination]);
-
-            console.log(`Generated: ${element1} + ${element2} = ${combination}`);
-          }
-        } catch (error) {
-          console.error('Error generating combination:', error);
-        }
-      }
+      await generateCombination(element1, element2);
     }
+
+    // Add a small delay to allow for smoother stopping
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
 
-  return Object.fromEntries(generatedCombinations);
+  generationStore.reset();
 }
