@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { elements, combinations, generationStore } from '$lib/stores.js';
 	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
+	import ElementsDragMain from './ElementsDragMain.svelte';
 
 	let selectedElements = [];
 	let result = '';
@@ -60,6 +61,10 @@
 			generateRandomCombinations(randomGenerationCount);
 		}
 	}
+
+	function handleDragStart(event, element) {
+		event.dataTransfer.setData('text/plain', element);
+	}
 </script>
 
 <div class="flex h-screen bg-gray-900 text-gray-200">
@@ -70,7 +75,9 @@
 			{#each $elements as element}
 				<button
 					on:click={() => selectElement(element)}
-					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+					draggable="true"
+					on:dragstart={(e) => handleDragStart(e, element)}
+					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
 					{element}
 				</button>
@@ -131,7 +138,7 @@
 	<div class="w-3/4 p-4">
 		<h2 class="text-2xl font-semibold mb-4">Element Connections</h2>
 		<div class="bg-gray-800 rounded-lg h-full p-4 flex items-center justify-center">
-			<p class="text-xl text-gray-400">Graph visualization will be implemented here</p>
+			<ElementsDragMain {elements} />
 		</div>
 	</div>
 </div>
