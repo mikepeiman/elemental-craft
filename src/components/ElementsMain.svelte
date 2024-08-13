@@ -62,11 +62,10 @@
 	}
 </script>
 
-<!-- The rest of the HTML remains the same -->
-
-<div class="container mx-auto px-4 py-8 max-w-4xl">
-	<div class="mb-8">
-		<h2 class="text-2xl font-semibold mb-4 text-gray-200">Elements</h2>
+<div class="flex h-screen bg-gray-900 text-gray-200">
+	<!-- Left Sidebar -->
+	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
+		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
 		<div class="flex flex-wrap gap-2">
 			{#each $elements as element}
 				<button
@@ -77,52 +76,62 @@
 				</button>
 			{/each}
 		</div>
-	</div>
 
-	<div class="mb-8">
-		<h2 class="text-2xl font-semibold mb-4 text-gray-700">Selected Elements</h2>
-		<div class="flex gap-4">
-			{#each selectedElements as element}
-				<span class="px-4 py-2 bg-gray-900 rounded-md text-cyan-400">{element}</span>
-			{/each}
+		<div class="mt-8">
+			<h2 class="text-2xl font-semibold mb-4">Selected Elements</h2>
+			<div class="flex gap-4">
+				{#each selectedElements as element}
+					<span class="px-4 py-2 bg-gray-800 rounded-md text-cyan-400">{element}</span>
+				{/each}
+			</div>
+		</div>
+
+		<div class="mt-8">
+			<h2 class="text-2xl font-semibold mb-4">Result</h2>
+			<p class="text-xl font-medium text-lime-400">
+				{result || 'Combine elements to see the result'}
+			</p>
+		</div>
+
+		<div class="mt-8">
+			<h2 class="text-2xl font-semibold mb-4">Random Generation</h2>
+			<div class="flex items-center gap-4">
+				<input
+					type="number"
+					bind:value={randomGenerationCount}
+					min="1"
+					max="1000"
+					class="px-4 py-2 border border-gray-700 rounded-md w-24 bg-gray-800 text-white"
+				/>
+				<button
+					on:click={toggleGeneration}
+					class="px-6 py-2 bg-lime-700 text-white rounded-md hover:bg-lime-600 transition-colors"
+				>
+					{$generationStore.isGenerating ? 'Stop Generation' : 'Start Random Generation'}
+				</button>
+			</div>
+		</div>
+
+		<div class="mt-8 bg-gray-800 p-4 rounded-lg">
+			<h3 class="text-xl font-semibold mb-4">Generation Status</h3>
+			<p class="mb-2">
+				Status:
+				<span class={$generationStore.isGenerating ? 'text-lime-600' : 'text-red-600'}>
+					{$generationStore.isGenerating ? 'Generating combinations...' : 'Generation stopped'}
+				</span>
+			</p>
+			<p class="mb-2">Total elements: <span class="font-medium">{$elements.length}</span></p>
+			<p>
+				Total combinations: <span class="font-medium">{Object.keys($combinations).length}</span>
+			</p>
 		</div>
 	</div>
 
-	<div class="mb-8">
-		<h2 class="text-2xl font-semibold mb-4 text-gray-700">Result</h2>
-		<p class="text-xl font-medium text-lime-400">
-			{result || 'Combine elements to see the result'}
-		</p>
-	</div>
-
-	<div class="mb-8">
-		<h2 class="text-2xl font-semibold mb-4 text-gray-200">Random Generation</h2>
-		<div class="flex items-center gap-4">
-			<input
-				type="number"
-				bind:value={randomGenerationCount}
-				min="1"
-				max="1000"
-				class="px-4 py-2 border border-gray-300 rounded-md w-24 bg-gray-900"
-			/>
-			<button
-				on:click={toggleGeneration}
-				class="px-6 py-2 bg-lime-700 text-white rounded-md hover:bg-lime-600 transition-colors"
-			>
-				{$generationStore.isGenerating ? 'Stop Generation' : 'Start Random Generation'}
-			</button>
+	<!-- Central Graph View -->
+	<div class="w-3/4 p-4">
+		<h2 class="text-2xl font-semibold mb-4">Element Connections</h2>
+		<div class="bg-gray-800 rounded-lg h-full p-4 flex items-center justify-center">
+			<p class="text-xl text-gray-400">Graph visualization will be implemented here</p>
 		</div>
-	</div>
-
-	<div class="bg-gray-900 p-6 rounded-lg">
-		<h3 class="text-xl font-semibold mb-4 text-gray-700">Generation Status</h3>
-		<p class="mb-2">
-			Status:
-			<span class={$generationStore.isGenerating ? 'text-lime-600' : 'text-red-600'}>
-				{$generationStore.isGenerating ? 'Generating combinations...' : 'Generation stopped'}
-			</span>
-		</p>
-		<p class="mb-2">Total elements: <span class="font-medium">{$elements.length}</span></p>
-		<p>Total combinations: <span class="font-medium">{Object.keys($combinations).length}</span></p>
 	</div>
 </div>
