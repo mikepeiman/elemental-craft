@@ -5,13 +5,13 @@
 
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 
-<div class="container h-screen mx-auto flex justify-center items-center">
-	<div class="flex flex-col">
-		<ElementsMain />
-	</div>
+<div class="container h-screen mx-auto flex justify-center items-center flex-col">
 	<div class="space-y-5">
 		<h1 class="h1">Elemental Craft</h1>
 		<p>Start by exploring themes:</p>
 		<ThemeSelector />
+	</div>
+	<div class="flex flex-col">
+		<ElementsMain />
 	</div>
 </div>
