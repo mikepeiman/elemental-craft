@@ -65,6 +65,16 @@
 	function handleDragStart(event, element) {
 		event.dataTransfer.setData('text/plain', element);
 	}
+
+	function handleDoubleClick(element) {
+		selectElement(element);
+
+		if (elementsDragMainComponent) {
+			elementsDragMainComponent.addElement(element, 50, 50);
+		}
+	}
+
+	let elementsDragMainComponent;
 </script>
 
 <div class="flex h-screen bg-gray-900 text-gray-200">
@@ -74,7 +84,7 @@
 		<div class="flex flex-wrap gap-2">
 			{#each $elements as element}
 				<button
-					on:click={() => selectElement(element)}
+					on:dblclick={() => handleDoubleClick(element)}
 					draggable="true"
 					on:dragstart={(e) => handleDragStart(e, element)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
@@ -138,7 +148,7 @@
 	<div class="w-3/4 p-4">
 		<h2 class="text-2xl font-semibold mb-4">Element Connections</h2>
 		<div class="bg-gray-800 rounded-lg h-full p-4 flex items-center justify-center">
-			<ElementsDragMain {elements} />
+			<ElementsDragMain bind:this={elementsDragMainComponent} {elements} />
 		</div>
 	</div>
 </div>
