@@ -37,6 +37,8 @@
   "type": "module",
   "dependencies": {
     "@floating-ui/dom": "1.6.10",
-    "@neodrag/svelte": "^2.0.6"
+    "@neodrag/svelte": "^2.0.6",
+    "dotenv": "^16.4.5",
+    "openai": "^4.55.7"
   }
 }
