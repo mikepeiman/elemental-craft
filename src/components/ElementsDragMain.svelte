@@ -21,6 +21,8 @@
 	}[] = [];
 	let nextId = 1;
 	let statusMessage = '';
+	let lastCombinedElements = { el1: '', el2: '' };
+	let lastResult = '';
 
 	const ELEMENT_PADDING = 10;
 	const ELEMENT_MARGIN = 5;
@@ -44,6 +46,7 @@
 		checkOverlap();
 		handleDragEnd();
 		updateElementSizes();
+		saveToLocalStorage();
 	}
 
 	function findFreePosition() {
@@ -81,6 +84,7 @@
 
 	function removeElement(id: number) {
 		dragElements = dragElements.filter((el) => el.id !== id);
+		saveToLocalStorage();
 	}
 
 	async function combineElements(id1: number, id2: number) {
@@ -91,6 +95,7 @@
 			el2.isCombining = true;
 			dragElements = [...dragElements];
 
+			lastCombinedElements = { el1: el1.content, el2: el2.content };
 			statusMessage = `Combining ${el1.content} and ${el2.content}...`;
 
 			const newContent = await generateCombination(el1.content, el2.content);
@@ -109,10 +114,9 @@
 				}
 			];
 
+			lastResult = newContent;
 			statusMessage = `Created ${newContent} from ${el1.content} and ${el2.content}`;
-			setTimeout(() => {
-				statusMessage = '';
-			}, 5000);
+			saveToLocalStorage();
 		}
 	}
 
@@ -169,11 +173,12 @@
 				const el1 = dragElements[i];
 				const el2 = dragElements[j];
 				if (isOverlapping(el1, el2)) {
-					setTimeout(() => combineElements(el1.id, el2.id), 500);
+					setTimeout(() => combineElements(el1.id, el2.id), 50);
 					return;
 				}
 			}
 		}
+		saveToLocalStorage();
 	}
 
 	function handleDrop(event: DragEvent) {
@@ -193,6 +198,7 @@
 
 	onMount(() => {
 		updateElementSizes();
+		loadFromLocalStorage();
 	});
 
 	function updateElementSizes() {
@@ -205,10 +211,30 @@
 			return el;
 		});
 	}
+
+	function saveToLocalStorage() {
+		localStorage.setItem('comboBoard', JSON.stringify(dragElements));
+	}
+
+	function loadFromLocalStorage() {
+		const savedData = localStorage.getItem('comboBoard');
+		if (savedData) {
+			dragElements = JSON.parse(savedData);
+			nextId = Math.max(...dragElements.map((el) => el.id)) + 1;
+		}
+	}
 </script>
 
 <div class="status-message" transition:fade>
-	{statusMessage}
+	{#if statusMessage}
+		<p>{statusMessage}</p>
+	{/if}
+	{#if lastCombinedElements.el1 && lastCombinedElements.el2}
+		<p>Last combined: {lastCombinedElements.el1} + {lastCombinedElements.el2}</p>
+	{/if}
+	{#if lastResult}
+		<p>Result: {lastResult}</p>
+	{/if}
 </div>
 
 <div class="graph-vis" on:drop={handleDrop} on:dragover={handleDragOver}>
@@ -223,12 +249,14 @@
 					handleDragEnd();
 					updateElementSizes();
 				},
-				defaultPosition: { x: element.x, y: element.y }
+				defaultPosition: { x: element.x, y: element.y },
+				grid: [1, 1]
 			}}
 			on:contextmenu|preventDefault={() => removeElement(element.id)}
 			class="draggable-element"
 			class:overlapping={element.isOverlapping}
 			class:combining={element.isCombining}
+			style="left: {element.x}px; top: {element.y}px;"
 		>
 			{element.content}
 		</div>

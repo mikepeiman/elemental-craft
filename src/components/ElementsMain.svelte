@@ -67,7 +67,7 @@
 	}
 
 	function handleDoubleClick(element) {
-		selectElement(element);
+		// selectElement(element);
 
 		if (elementsDragMainComponent) {
 			elementsDragMainComponent.addElement(element, 50, 50);
