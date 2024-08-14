@@ -14,9 +14,12 @@
 		y: number;
 		width: number;
 		height: number;
+		isOverlapping: boolean;
+		isCombining: boolean;
 	}[] = [];
 	let nextId = 1;
 	let statusMessage = '';
+	let graphVisElement: HTMLElement;
 
 	const ELEMENT_PADDING = 10;
 	const ELEMENT_MARGIN = 5;
@@ -32,17 +35,17 @@
 				x: position.x,
 				y: position.y,
 				width: 0,
-				height: 0
+				height: 0,
+				isOverlapping: false,
+				isCombining: false
 			}
 		];
 		updateElementSizes();
 		saveToLocalStorage();
 	}
-
 	function findFreePosition() {
-		const container = document.querySelector('.graph-vis');
-		const containerWidth = container.clientWidth;
-		const containerHeight = container.clientHeight;
+		const containerWidth = graphVisElement?.clientWidth || 500;
+		const containerHeight = graphVisElement?.clientHeight || 500;
 		const rowHeight = ELEMENT_HEIGHT + ELEMENT_PADDING * 2 + ELEMENT_MARGIN;
 		const maxRows = Math.floor(containerHeight / rowHeight);
 
@@ -80,7 +83,12 @@
 	async function combineElements(el1, el2) {
 		statusMessage = `Combining ${el1.content} and ${el2.content}...`;
 
+		el1.isCombining = true;
+		el2.isCombining = true;
+		dragElements = [...dragElements];
+
 		const newContent = await generateCombination(el1.content, el2.content);
+
 		dragElements = dragElements.filter((el) => el.id !== el1.id && el.id !== el2.id);
 		addElement(newContent, el1.x, el1.y);
 
@@ -89,16 +97,30 @@
 	}
 
 	function checkOverlapAndCombine() {
+		let overlappingPairs = [];
+		dragElements.forEach((el) => {
+			el.isOverlapping = false;
+			el.isCombining = false;
+		});
+
 		for (let i = 0; i < dragElements.length; i++) {
 			for (let j = i + 1; j < dragElements.length; j++) {
 				const el1 = dragElements[i];
 				const el2 = dragElements[j];
 				if (isOverlapping(el1, el2)) {
-					combineElements(el1, el2);
-					return;
+					overlappingPairs.push([el1, el2]);
+					el1.isOverlapping = true;
+					el2.isOverlapping = true;
 				}
 			}
 		}
+
+		if (overlappingPairs.length > 0) {
+			const [el1, el2] = overlappingPairs[0];
+			combineElements(el1, el2);
+		}
+
+		dragElements = [...dragElements]; // Trigger reactivity
 	}
 
 	function isOverlapping(el1, el2) {
@@ -127,7 +149,7 @@
 		event.preventDefault();
 		const content = event.dataTransfer?.getData('text/plain');
 		if (content) {
-			const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+			const rect = graphVisElement.getBoundingClientRect();
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
 			addElement(content, x, y);
@@ -138,10 +160,33 @@
 		event.preventDefault();
 	}
 
-	onMount(() => {
-		updateElementSizes();
-		loadFromLocalStorage();
-	});
+	function getDragOptions(element): DragOptions {
+		console.log(`🚀 ~ getDragOptions ~ element:`, element);
+		return {
+			position: { x: element.x, y: element.y },
+			bounds: 'parent',
+			gpuAcceleration: true,
+			onDrag: ({ offsetX, offsetY }: DragEventData) => {
+				element.x = offsetX;
+				element.y = offsetY;
+				checkOverlap(element);
+			},
+			onDragEnd: () => {
+				checkOverlapAndCombine();
+				updateElementSizes();
+				saveToLocalStorage();
+			}
+		};
+	}
+
+	function checkOverlap(currentElement) {
+		dragElements.forEach((element) => {
+			if (element.id !== currentElement.id) {
+				element.isOverlapping = isOverlapping(currentElement, element);
+			}
+		});
+		dragElements = [...dragElements]; // Trigger reactivity
+	}
 
 	function updateElementSizes() {
 		dragElements = dragElements.map((el) => {
@@ -166,36 +211,35 @@
 		}
 	}
 
-	function getDragOptions(element): DragOptions {
-		return {
-			position: { x: element.x, y: element.y },
-			bounds: 'parent',
-			grid: [1, 1], // Add this for smoother dragging
-			onDrag: ({ offsetX, offsetY }: DragEventData) => {
-				element.x = offsetX;
-				element.y = offsetY;
-			},
-			onDragEnd: () => {
-				checkOverlapAndCombine();
-				updateElementSizes();
-				saveToLocalStorage();
-			}
-		};
-	}
+	onMount(() => {
+		updateElementSizes();
+		loadFromLocalStorage();
+	});
 </script>
 
-<div class="graph-vis" on:drop={handleDrop} on:dragover={handleDragOver}>
+<div
+	class="graph-vis"
+	bind:this={graphVisElement}
+	on:drop={handleDrop}
+	on:dragover={handleDragOver}
+>
 	{#each dragElements as element (element.id)}
 		<div
 			id="element-{element.id}"
 			use:draggable={getDragOptions(element)}
 			on:contextmenu|preventDefault={() => removeElement(element.id)}
 			class="draggable-element"
+			class:overlapping={element.isOverlapping}
+			style="transform: translate({element.x}px, {element.y}px)"
 		>
 			{element.content}
 		</div>
 	{/each}
 </div>
+
+{#if statusMessage}
+	<div class="status-message">{statusMessage}</div>
+{/if}
 
 <style>
 	.graph-vis {
@@ -214,8 +258,10 @@
 		border-radius: 5px;
 		cursor: move;
 		user-select: none;
-		transition: all 0.3s ease;
 		color: #fff;
+		transition:
+			box-shadow 0.3s ease,
+			border-color 0.3s ease;
 	}
 
 	.overlapping {

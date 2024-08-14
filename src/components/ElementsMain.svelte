@@ -76,11 +76,6 @@
 	}
 
 	let elementsDragMainComponent;
-	let comboBoardHeight;
-
-	function handleResize() {
-		comboBoardHeight = window.innerHeight - 100; // Adjust this value as needed
-	}
 </script>
 
 <div class="flex h-screen bg-gray-900 text-gray-200">

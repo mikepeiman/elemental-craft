@@ -41,12 +41,12 @@ export async function generateCombination(element1, element2) {
 }
 
 function updateRecentStore(newEl1, newEl2, newResult) {
-  lastCombinedElements.update(store => ({
-    ...store,
+  console.log(`🚀 ~ updateRecentStore ~ newEl1, newEl2, newResult:`, newEl1, newEl2, newResult)
+  lastCombinedElements.set({
     lastElement1: newEl1,
     lastElement2: newEl2,
     lastResult: newResult
-  }));
+  });
 }
 
 export async function generateRandomCombinations(count) {

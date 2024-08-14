@@ -47,11 +47,38 @@ function createCombinationsStore() {
     };
 }
 
-export const lastCombinedElements = writable({
-    lastElement1: '',
-    lastElement2: '',
-    lastResult: ''
-});
+function createRecentCombinationsStore() {
+    const { subscribe, set, update } = writable({});
+
+    return {
+        subscribe,
+        set: (value) => {
+            set(value);
+            if (browser) {
+                localStorage.setItem('recentCombinations', JSON.stringify(value));
+            }
+        },
+        update: (updater) => {
+            update(store => {
+                const newStore = updater(store);
+                if (browser) {
+                    localStorage.setItem('recentCombinations', JSON.stringify(newStore));
+                }
+                return newStore;
+            });
+        }
+    };
+}
+
+export const lastCombinedElements = createRecentCombinationsStore();
+
+// export const lastCombinedElements = writable({
+//     lastElement1: '',
+//     lastElement2: '',
+//     lastResult: ''
+// });
+
+
 
 export const elements = createElementsStore();
 export const combinations = createCombinationsStore();
