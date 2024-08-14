@@ -71,7 +71,7 @@
 		// selectElement(element);
 
 		if (elementsDragMainComponent) {
-			elementsDragMainComponent.addElement(element, 50, 50);
+			elementsDragMainComponent.addElement(element, 0, 0);
 		}
 	}
 

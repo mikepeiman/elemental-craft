@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { draggable } from '@neodrag/svelte';
-	import type { DragEventData } from '@neodrag/svelte';
+	import type { DragEventData, DragOptions } from '@neodrag/svelte';
 	import { generateCombination } from '$lib/generateCombinations.js';
-	import { fade } from 'svelte/transition';
 	import { lastCombinedElements } from '$lib/stores.js';
 
 	export let elements: string[];
-
-	const dispatch = createEventDispatcher();
 
 	let dragElements: {
 		id: number;
@@ -17,20 +14,15 @@
 		y: number;
 		width: number;
 		height: number;
-		isOverlapping: boolean;
-		isCombining: boolean;
 	}[] = [];
 	let nextId = 1;
 	let statusMessage = '';
-	$: ({ lastElement1, lastElement2, lastResult } = $lastCombinedElements);
-
-	let lastResult = '';
 
 	const ELEMENT_PADDING = 10;
 	const ELEMENT_MARGIN = 5;
-	const ELEMENT_HEIGHT = 40; // Approximate height of an element
+	const ELEMENT_HEIGHT = 40;
 
-	export function addElement(content: string, x: number, y: number) {
+	function addElement(content: string, x: number, y: number) {
 		const position = findFreePosition();
 		dragElements = [
 			...dragElements,
@@ -40,26 +32,23 @@
 				x: position.x,
 				y: position.y,
 				width: 0,
-				height: 0,
-				isOverlapping: false,
-				isCombining: false
+				height: 0
 			}
 		];
-		checkOverlap();
-		handleDragEnd();
 		updateElementSizes();
 		saveToLocalStorage();
 	}
 
 	function findFreePosition() {
-		const containerWidth = document.querySelector('.graph-vis').clientWidth;
-		const containerHeight = document.querySelector('.graph-vis').clientHeight;
+		const container = document.querySelector('.graph-vis');
+		const containerWidth = container.clientWidth;
+		const containerHeight = container.clientHeight;
 		const rowHeight = ELEMENT_HEIGHT + ELEMENT_PADDING * 2 + ELEMENT_MARGIN;
 		const maxRows = Math.floor(containerHeight / rowHeight);
 
 		for (let attempt = 0; attempt < 100; attempt++) {
 			const row = Math.floor(Math.random() * maxRows);
-			const x = Math.random() * (containerWidth - 100); // 100 is an approximation of element width
+			const x = Math.random() * (containerWidth - 100);
 			const y = row * rowHeight;
 
 			if (!isPositionOccupied(x, y)) {
@@ -67,7 +56,6 @@
 			}
 		}
 
-		// If we couldn't find a free position, return a random position
 		return {
 			x: Math.random() * (containerWidth - 100),
 			y: Math.random() * (containerHeight - ELEMENT_HEIGHT)
@@ -89,62 +77,28 @@
 		saveToLocalStorage();
 	}
 
-	async function combineElements(id1: number, id2: number) {
-		const el1 = dragElements.find((el) => el.id === id1);
-		const el2 = dragElements.find((el) => el.id === id2);
-		if (el1 && el2) {
-			el1.isCombining = true;
-			el2.isCombining = true;
-			dragElements = [...dragElements];
+	async function combineElements(el1, el2) {
+		statusMessage = `Combining ${el1.content} and ${el2.content}...`;
 
-			// lastCombinedElements = { el1: el1.content, el2: el2.content };
-			statusMessage = `Combining ${el1.content} and ${el2.content}...`;
+		const newContent = await generateCombination(el1.content, el2.content);
+		dragElements = dragElements.filter((el) => el.id !== el1.id && el.id !== el2.id);
+		addElement(newContent, el1.x, el1.y);
 
-			const newContent = await generateCombination(el1.content, el2.content);
-			dragElements = dragElements.filter((el) => el.id !== id1 && el.id !== id2);
-			dragElements = [
-				...dragElements,
-				{
-					id: nextId++,
-					content: newContent,
-					x: el1.x,
-					y: el1.y,
-					width: 0,
-					height: 0,
-					isOverlapping: false,
-					isCombining: false
-				}
-			];
-
-			lastResult = newContent;
-			statusMessage = `Created ${newContent} from ${el1.content} and ${el2.content}`;
-			saveToLocalStorage();
-		}
+		lastCombinedElements.set({ el1: el1.content, el2: el2.content, result: newContent });
+		statusMessage = `Created ${newContent} from ${el1.content} and ${el2.content}`;
 	}
 
-	function handleDrag(id: number, event: CustomEvent<DragEventData>) {
-		const { offsetX, offsetY } = event.detail;
-		dragElements = dragElements.map((el) =>
-			el.id === id ? { ...el, x: offsetX, y: offsetY } : el
-		);
-		checkOverlap();
-	}
-
-	function checkOverlap() {
+	function checkOverlapAndCombine() {
 		for (let i = 0; i < dragElements.length; i++) {
-			dragElements[i].isOverlapping = false;
-			for (let j = 0; j < dragElements.length; j++) {
-				if (i !== j) {
-					const el1 = dragElements[i];
-					const el2 = dragElements[j];
-					if (isOverlapping(el1, el2)) {
-						el1.isOverlapping = true;
-						el2.isOverlapping = true;
-					}
+			for (let j = i + 1; j < dragElements.length; j++) {
+				const el1 = dragElements[i];
+				const el2 = dragElements[j];
+				if (isOverlapping(el1, el2)) {
+					combineElements(el1, el2);
+					return;
 				}
 			}
 		}
-		dragElements = [...dragElements];
 	}
 
 	function isOverlapping(el1, el2) {
@@ -169,25 +123,11 @@
 		);
 	}
 
-	function handleDragEnd() {
-		for (let i = 0; i < dragElements.length; i++) {
-			for (let j = i + 1; j < dragElements.length; j++) {
-				const el1 = dragElements[i];
-				const el2 = dragElements[j];
-				if (isOverlapping(el1, el2)) {
-					setTimeout(() => combineElements(el1.id, el2.id), 50);
-					return;
-				}
-			}
-		}
-		saveToLocalStorage();
-	}
-
 	function handleDrop(event: DragEvent) {
 		event.preventDefault();
 		const content = event.dataTransfer?.getData('text/plain');
 		if (content) {
-			const rect = event.currentTarget.getBoundingClientRect();
+			const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
 			addElement(content, x, y);
@@ -225,40 +165,32 @@
 			nextId = Math.max(...dragElements.map((el) => el.id)) + 1;
 		}
 	}
-</script>
 
-<!-- <div class="status-message" transition:fade>
-	{#if statusMessage}
-		<p>{statusMessage}</p>
-	{/if}
-	{#if lastCombinedElements.el1 && lastCombinedElements.el2}
-		<p>Last combined: {lastCombinedElements.el1} + {lastCombinedElements.el2}</p>
-	{/if}
-	{#if lastResult}
-		<p>Result: {lastResult}</p>
-	{/if}
-</div> -->
+	function getDragOptions(element): DragOptions {
+		return {
+			position: { x: element.x, y: element.y },
+			bounds: 'parent',
+			grid: [1, 1], // Add this for smoother dragging
+			onDrag: ({ offsetX, offsetY }: DragEventData) => {
+				element.x = offsetX;
+				element.y = offsetY;
+			},
+			onDragEnd: () => {
+				checkOverlapAndCombine();
+				updateElementSizes();
+				saveToLocalStorage();
+			}
+		};
+	}
+</script>
 
 <div class="graph-vis" on:drop={handleDrop} on:dragover={handleDragOver}>
 	{#each dragElements as element (element.id)}
 		<div
 			id="element-{element.id}"
-			use:draggable={{
-				position: { x: element.x, y: element.y },
-				bounds: 'parent',
-				onDrag: (e) => handleDrag(element.id, { detail: e }),
-				onDragEnd: () => {
-					handleDragEnd();
-					updateElementSizes();
-				},
-				defaultPosition: { x: element.x, y: element.y },
-				grid: [1, 1]
-			}}
+			use:draggable={getDragOptions(element)}
 			on:contextmenu|preventDefault={() => removeElement(element.id)}
 			class="draggable-element"
-			class:overlapping={element.isOverlapping}
-			class:combining={element.isCombining}
-			style="left: {element.x}px; top: {element.y}px;"
 		>
 			{element.content}
 		</div>
