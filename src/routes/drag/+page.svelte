@@ -6,6 +6,8 @@
 	import { onMount } from 'svelte';
 
 	let dragArea: HTMLDivElement;
+	let dragAreaParent: HTMLDivElement;
+	let elementsSidePanel: HTMLDivElement;
 	let dragRect: DOMRect;
 	let dragBounds: Object;
 	let currentElement: HTMLDivElement;
@@ -32,6 +34,7 @@
 			top: dragRect.top,
 			bottom: dragRect.bottom
 		};
+		console.log(`🚀 ~ onMount ~ dragBounds:`, dragBounds);
 	});
 
 	function startElementDrag(e: DragEventData, element) {
@@ -62,17 +65,21 @@
 		let currentElement = e.target;
 		dragArea.appendChild(currentElement);
 
-		currentElement.style.left = mouseX;
+		currentElement.style.left = mouseX - dragRect.left;
+		currentElement.style.top = mouseY - dragRect.top;
+		console.log(`🚀 ~ endElementDrag ~ currentElement:`, currentElement);
 
 		console.log(`🚀 ~ endElementDrag ~ mouseX mouseY:`, mouseX, mouseY);
-		currentElement.style.top = mouseY;
 	}
 </script>
 
 <svelte:window on:mousemove={handleMouseMove} on:mouseup={notePosition} />
 <div class="flex h-screen bg-gray-900 text-gray-200">
 	<!-- Left Sidebar -->
-	<div class="sidebar w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
+	<div
+		bind:this={elementsSidePanel}
+		class="sidebar w-1/4 p-4 border-r border-gray-700 overflow-y-auto"
+	>
 		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
 		{#each $elements as element}
 			<div
@@ -90,43 +97,8 @@
 			</div>
 		{/each}
 	</div>
-	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
-		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
-		{#each $elements as element}
-			<!-- svelte-ignore a11y-no-static-element-interactions -->
-			<div
-				id="element-{element.id}"
-				use:draggable={{
-					bounds: 'parent',
-					gpuAcceleration: true,
-					onDrag: (e) => {
-						console.log(`🚀 ~ e:`, e);
 
-						element.x = e.offsetX;
-						element.y = e.offsetY;
-						// checkOverlap(element);
-					},
-					onDragEnd: () => {
-						// checkOverlapAndCombine(element);
-						// updateElementSizes();
-						// saveToLocalStorage();
-					}
-				}}
-				on:mousemove={handleMouseMove}
-				on:contextmenu|preventDefault={() => removeElement(element.id)}
-				class="draggable-element bg-orange-500 px-4 py-2 rounded-sm"
-				class:overlapping={element.isOverlapping}
-				class:combining={element.isCombining}
-				class:new-combo={element.isNewCombo}
-				class:existing-combo={element.isCombining && !element.isNewCombo}
-				style="transform: translate({element.x}px, {element.y}px)"
-			>
-				{element.content}
-			</div>
-		{/each}
-	</div>
-
-	<div class="w-full h-full flex flex-col">
+	<div bind:this={dragAreaParent} class="w-full h-full flex flex-col">
 		<div
 			class=" bg-slate-900 border-t-lime-500 border-lime-900 border-[2rem] w-full h-full flex flex-col items-start justify-apart align-middle"
 		>
