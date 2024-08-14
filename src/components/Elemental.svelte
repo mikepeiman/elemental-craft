@@ -3,7 +3,15 @@
 	import { browser } from '$app/environment';
 	import { draggable } from '@neodrag/svelte';
 	import type { DragEventData, DragOptions } from '@neodrag/svelte';
-	import { elements, combinations, generationStore, lastCombinedElements } from '$lib/stores.js';
+	import {
+		elements,
+		combinations,
+		generationStore,
+		lastCombinedElements,
+		lastElement1,
+		lastElement2,
+		lastResult
+	} from '$lib/stores.js';
 	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
 
 	let selectedElements = [];
@@ -11,12 +19,12 @@
 	let randomGenerationCount = 10;
 	let statusMessage = '';
 	let graphVisElement: HTMLElement;
-	$: ({ lastElement1, lastElement2, lastResult } = $lastCombinedElements);
+
 	$: console.log(
 		`🚀 ~ lastElement1, lastElement2, lastResult:`,
-		lastElement1,
-		lastElement2,
-		lastResult
+		$lastElement1,
+		$lastElement2,
+		$lastResult
 	);
 
 	let dragElements: {
@@ -327,7 +335,7 @@
 		<div class="flex items-center justify-apart align-middle">
 			<h2 class="text-2xl font-semibold mb-4">Last Combination</h2>
 			<div class="bg-gray-800 rounded-lg h-full p-4">
-				{lastElement1} + {lastElement2} = {lastResult}
+				{$lastElement1} + {$lastElement2} = {$lastResult}
 			</div>
 		</div>
 		<div

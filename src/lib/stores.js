@@ -1,87 +1,34 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-function createElementsStore() {
-    const { subscribe, set, update } = writable(['Water', 'Fire', 'Earth', 'Air', 'Spirit']);
+function createPersistentStore(key, initialValue) {
+    const storedValue = browser ? localStorage.getItem(key) : null;
+    const { subscribe, set, update } = writable(storedValue ? JSON.parse(storedValue) : initialValue);
 
     return {
         subscribe,
         set: (value) => {
             set(value);
             if (browser) {
-                localStorage.setItem('elements', JSON.stringify(value));
+                localStorage.setItem(key, JSON.stringify(value));
             }
         },
-        update: (updater) => {
-            update(store => {
-                const newStore = updater(store);
-                if (browser) {
-                    localStorage.setItem('elements', JSON.stringify(newStore));
-                }
-                return newStore;
-            });
-        }
+        update
     };
 }
 
-function createCombinationsStore() {
-    const { subscribe, set, update } = writable({});
+export const elements = createPersistentStore('elements', ['Water', 'Fire', 'Earth', 'Air', 'Spirit']);
+export const combinations = createPersistentStore('combinations', {});
 
-    return {
-        subscribe,
-        set: (value) => {
-            set(value);
-            if (browser) {
-                localStorage.setItem('combinations', JSON.stringify(value));
-            }
-        },
-        update: (updater) => {
-            update(store => {
-                const newStore = updater(store);
-                if (browser) {
-                    localStorage.setItem('combinations', JSON.stringify(newStore));
-                }
-                return newStore;
-            });
-        }
-    };
-}
+export const lastElement1 = writable('');
+export const lastElement2 = writable('');
+export const lastResult = writable('');
 
-function createRecentCombinationsStore() {
-    const { subscribe, set, update } = writable({});
-
-    return {
-        subscribe,
-        set: (value) => {
-            set(value);
-            if (browser) {
-                localStorage.setItem('recentCombinations', JSON.stringify(value));
-            }
-        },
-        update: (updater) => {
-            update(store => {
-                const newStore = updater(store);
-                if (browser) {
-                    localStorage.setItem('recentCombinations', JSON.stringify(newStore));
-                }
-                return newStore;
-            });
-        }
-    };
-}
-
-export const lastCombinedElements = createRecentCombinationsStore();
-
-// export const lastCombinedElements = writable({
-//     lastElement1: '',
-//     lastElement2: '',
-//     lastResult: ''
-// });
-
-
-
-export const elements = createElementsStore();
-export const combinations = createCombinationsStore();
+export const lastCombinedElements = writable({
+    lastElement1: '',
+    lastElement2: '',
+    lastResult: ''
+})
 
 export const generationStore = (() => {
     const { subscribe, set, update } = writable({
@@ -96,16 +43,3 @@ export const generationStore = (() => {
         reset: () => set({ isGenerating: false, shouldStop: false })
     };
 })();
-
-// Initialize stores from localStorage if in browser environment
-if (browser) {
-    const storedElements = localStorage.getItem('elements');
-    const storedCombinations = localStorage.getItem('combinations');
-
-    if (storedElements) {
-        elements.set(JSON.parse(storedElements));
-    }
-    if (storedCombinations) {
-        combinations.set(JSON.parse(storedCombinations));
-    }
-}

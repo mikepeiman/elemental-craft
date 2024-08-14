@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { elements, combinations, generationStore } from './stores.js';
-import { lastCombinedElements } from './stores.js';
+import { lastCombinedElements, lastElement1, lastElement2, lastResult } from './stores.js';
 
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
@@ -42,11 +42,10 @@ export async function generateCombination(element1, element2) {
 
 function updateRecentStore(newEl1, newEl2, newResult) {
   console.log(`🚀 ~ updateRecentStore ~ newEl1, newEl2, newResult:`, newEl1, newEl2, newResult)
-  lastCombinedElements.set({
-    lastElement1: newEl1,
-    lastElement2: newEl2,
-    lastResult: newResult
-  });
+  lastElement1.set(newEl1);
+  lastElement2.set(newEl2);
+  lastResult.set(newResult);
+
 }
 
 export async function generateRandomCombinations(count) {
