@@ -30,6 +30,7 @@
 	let dragElements: {
 		id: number;
 		content: string;
+		parents: string[];
 		x: number;
 		y: number;
 		width: number;
@@ -74,7 +75,8 @@
 		}
 	});
 
-	function addElement(content: string, x: number, y: number) {
+	function addElement(content, x, y) {
+		console.log(`🚀 ~ addElement ~ content, x, y:`, content, x, y);
 		const position = findFreePosition();
 		dragElements = [
 			...dragElements,
@@ -189,16 +191,23 @@
 
 	function handleDrop(event: DragEvent) {
 		event.preventDefault();
+		console.log(`🚀 ~ handleDrop ~ event:`, event);
 		const content = event.dataTransfer?.getData('text/plain');
 		if (content && graphVisElement) {
 			const rect = graphVisElement.getBoundingClientRect();
-			const x = event.clientX - rect.left;
-			const y = event.clientY - rect.top;
+			console.log(`🚀 ~ handleDrop ~ rect:`, rect);
+			// const x = event.clientX - rect.left;
+			// const y = event.clientY - rect.top;
+			const x = event.pageX;
+			const y = event.pageY;
+			console.log(`🚀 ~ handleDrop ~ x:`, x);
+			console.log(`🚀 ~ handleDrop ~ y:`, y);
+			addElement(content, x, y);
 
 			// Check if the drop position is within the bounds of the graph-vis element
-			if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-				addElement(content, x, y);
-			}
+			// if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+			// addElement(content, x, y);
+			// }
 		}
 	}
 
@@ -301,7 +310,7 @@
 					isCombining: false,
 					isNewCombo: false
 				}));
-			}, 2000);
+			}, 200);
 		}
 
 		// Ensure reactivity
@@ -345,7 +354,7 @@
 	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
 		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
 		<div class="flex flex-wrap gap-2">
-			{#each $elements as element}
+			<!-- {#each $elements as element}
 				<button
 					on:dblclick={() => handleDoubleClick(element)}
 					draggable="true"
@@ -354,6 +363,32 @@
 				>
 					{element}
 				</button>
+			{/each} -->
+
+			{#each $elements as element}
+				<div
+					draggable="true"
+					use:draggable={{
+						bounds: graphVisElement,
+						gpuAcceleration: true,
+						onDragStart: (event) => {
+							console.log(`🚀 ~ event:`, event);
+						},
+						onDrag: ({ offsetX, offsetY }) => {
+							element.x = offsetX;
+							element.y = offsetY;
+							checkOverlap(element);
+						},
+						onDragEnd: (event) => {
+							checkOverlapAndCombine(element);
+							// updateElementSizes();
+							saveToLocalStorage();
+						}
+					}}
+					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
+				>
+					{element}
+				</div>
 			{/each}
 		</div>
 
@@ -402,8 +437,8 @@
 		<div
 			class="graph-vis bg-gray-800 rounded-lg h-full p-4 flex items-center justify-center"
 			bind:this={graphVisElement}
-			on:drop={handleDrop}
 			on:dragover={handleDragOver}
+			on:drop={(e) => handleDrop(e)}
 		>
 			{#each dragElements as element (element.id)}
 				<div
@@ -437,10 +472,6 @@
 		</div>
 	</div>
 </div>
-
-{#if statusMessage}
-	<div class="status-message">{statusMessage}</div>
-{/if}
 
 <style>
 	.graph-vis {

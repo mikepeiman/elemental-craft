@@ -42,9 +42,9 @@ export async function generateCombination(element1, element2) {
 
 function updateRecentStore(newEl1, newEl2, newResult) {
   console.log(`🚀 ~ updateRecentStore ~ newEl1, newEl2, newResult:`, newEl1, newEl2, newResult)
-  lastElement1.set(newEl1);
-  lastElement2.set(newEl2);
-  lastResult.set(newResult);
+  lastElement1.content.set(newEl1);
+  lastElement2.content.set(newEl2);
+  lastResult.content.set(newResult);
 
 }
 
