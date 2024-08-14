@@ -7,7 +7,6 @@
 		elements,
 		combinations,
 		generationStore,
-		lastCombinedElements,
 		lastElement1,
 		lastElement2,
 		lastResult
@@ -147,7 +146,6 @@
 		addElement(newContent, el1.x, el1.y);
 		dragElements[dragElements.length - 1].isNewCombo = isNewCombo;
 
-		lastCombinedElements.set({ el1: el1.content, el2: el2.content, result: newContent });
 		statusMessage = `Created ${newContent} from ${el1.content} and ${el2.content}`;
 
 		setTimeout(() => {
@@ -387,7 +385,7 @@
 					}}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
-					{element}
+					{element.content}
 				</div>
 			{/each}
 		</div>
@@ -431,7 +429,7 @@
 		<div class="flex items-center justify-apart align-middle">
 			<h2 class="text-2xl font-semibold mb-4">Last Combination</h2>
 			<div class="bg-gray-800 rounded-lg h-full p-4">
-				{$lastElement1} + {$lastElement2} = {$lastResult}
+				{$lastElement1.content} + {$lastElement2.content} = {$lastResult.content}
 			</div>
 		</div>
 		<div

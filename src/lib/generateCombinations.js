@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { elements, combinations, generationStore } from './stores.js';
-import { lastCombinedElements, lastElement1, lastElement2, lastResult } from './stores.js';
+import { lastElement1, lastElement2, lastResult } from './stores.js';
 
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');

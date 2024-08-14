@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { elements, combinations, generationStore, lastCombinedElements } from '$lib/stores.js';
+	import { elements, combinations, generationStore } from '$lib/stores.js';
 	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
 	import ElementsDragMain from './ElementsDragMain.svelte';
 
@@ -91,7 +91,7 @@
 					on:dragstart={(e) => handleDragStart(e, element)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
-					{element}
+					{element.content}
 				</button>
 			{/each}
 		</div>
@@ -100,7 +100,7 @@
 			<h2 class="text-2xl font-semibold mb-4">Selected Elements</h2>
 			<div class="flex gap-4">
 				{#each selectedElements as element}
-					<span class="px-4 py-2 bg-gray-800 rounded-md text-cyan-400">{element}</span>
+					<span class="px-4 py-2 bg-gray-800 rounded-md text-cyan-400">{element.content}</span>
 				{/each}
 			</div>
 		</div>

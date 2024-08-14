@@ -3,7 +3,6 @@
 	import { draggable } from '@neodrag/svelte';
 	import type { DragEventData, DragOptions } from '@neodrag/svelte';
 	import { generateCombination } from '$lib/generateCombinations.js';
-	import { lastCombinedElements } from '$lib/stores.js';
 
 	export let elements: string[];
 
