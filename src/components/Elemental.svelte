@@ -81,8 +81,8 @@
 			{
 				id: nextId++,
 				content,
-				x: position.x,
-				y: position.y,
+				x,
+				y,
 				width: 0,
 				height: 0,
 				isOverlapping: false,
@@ -190,11 +190,15 @@
 	function handleDrop(event: DragEvent) {
 		event.preventDefault();
 		const content = event.dataTransfer?.getData('text/plain');
-		if (content) {
+		if (content && graphVisElement) {
 			const rect = graphVisElement.getBoundingClientRect();
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
-			addElement(content, x, y);
+
+			// Check if the drop position is within the bounds of the graph-vis element
+			if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+				addElement(content, x, y);
+			}
 		}
 	}
 
@@ -229,22 +233,79 @@
 		dragElements = [...dragElements]; // Trigger reactivity
 	}
 
-	function checkOverlapAndCombine() {
-		let overlappingPairs = [];
+	async function checkOverlapAndCombine(droppedElement) {
+		console.log(`🚀 ~ checkOverlapAndCombine ~ droppedElement:`, droppedElement);
+
+		let overlappingElement = null;
+
+		// Reset properties for all elements
+		dragElements = dragElements.map((el) => ({
+			...el,
+			isOverlapping: false,
+			isCombining: false,
+			isNewCombo: false
+		}));
+
+		// Find overlapping element
 		for (let i = 0; i < dragElements.length; i++) {
-			for (let j = i + 1; j < dragElements.length; j++) {
-				const el1 = dragElements[i];
-				const el2 = dragElements[j];
-				if (isOverlapping(el1, el2)) {
-					overlappingPairs.push([el1, el2]);
-				}
+			const currentElement = dragElements[i];
+			if (
+				currentElement.id !== droppedElement.id &&
+				isOverlapping(droppedElement, currentElement)
+			) {
+				overlappingElement = currentElement;
+				break;
 			}
 		}
 
-		if (overlappingPairs.length > 0) {
-			const [el1, el2] = overlappingPairs[0];
-			combineElements(el1, el2);
+		if (overlappingElement) {
+			// Set isOverlapping for both elements
+			droppedElement.isOverlapping = true;
+			overlappingElement.isOverlapping = true;
+
+			// Set isCombining for both elements
+			droppedElement.isCombining = true;
+			overlappingElement.isCombining = true;
+
+			// Trigger reactivity
+			dragElements = [...dragElements];
+
+			// Perform combination
+			const newContent = await generateCombination(
+				droppedElement.content,
+				overlappingElement.content
+			);
+			const isNewCombo = !$combinations[`${droppedElement.content}+${overlappingElement.content}`];
+
+			// Remove old elements and add new combined element
+			dragElements = dragElements.filter(
+				(el) => el.id !== droppedElement.id && el.id !== overlappingElement.id
+			);
+			const newElement = addElement(newContent, droppedElement.x, droppedElement.y);
+
+			// Set isNewCombo for the new element
+			newElement ? (newElement.isNewCombo = isNewCombo) : null;
+
+			// Update last combined elements
+			lastElement1.set(droppedElement.content);
+			lastElement2.set(overlappingElement.content);
+			lastResult.set(newContent);
+
+			// Update status message
+			statusMessage = `Created ${newContent} from ${droppedElement.content} and ${overlappingElement.content}`;
+
+			// Reset combining state after a short delay
+			setTimeout(() => {
+				dragElements = dragElements.map((el) => ({
+					...el,
+					isCombining: false,
+					isNewCombo: false
+				}));
+			}, 2000);
 		}
+
+		// Ensure reactivity
+		dragElements = [...dragElements];
 	}
 
 	function updateElementSizes() {
@@ -357,8 +418,8 @@
 							checkOverlap(element);
 						},
 						onDragEnd: () => {
-							checkOverlapAndCombine();
-							updateElementSizes();
+							checkOverlapAndCombine(element);
+							// updateElementSizes();
 							saveToLocalStorage();
 						}
 					}}
