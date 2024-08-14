@@ -88,7 +88,8 @@
 				height: 0,
 				isOverlapping: false,
 				isCombining: false,
-				isNewCombo: false
+				isNewCombo: false,
+				parents: []
 			}
 		];
 		updateElementSizes();
