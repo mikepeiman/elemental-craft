@@ -47,6 +47,12 @@ function createCombinationsStore() {
     };
 }
 
+export const lastCombinedElements = writable({
+    lastElement1: '',
+    lastElement2: '',
+    lastResult: ''
+});
+
 export const elements = createElementsStore();
 export const combinations = createCombinationsStore();
 

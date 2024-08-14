@@ -1,13 +1,14 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { elements, combinations, generationStore } from '$lib/stores.js';
+	import { elements, combinations, generationStore, lastCombinedElements } from '$lib/stores.js';
 	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
 	import ElementsDragMain from './ElementsDragMain.svelte';
 
 	let selectedElements = [];
 	let result = '';
 	let randomGenerationCount = 10;
+	$: ({ lastElement1, lastElement2, lastResult } = $lastCombinedElements);
 
 	onMount(() => {
 		if (browser) {
@@ -152,7 +153,12 @@
 
 	<!-- Central Graph View -->
 	<div class="w-3/4 p-4">
-		<h2 class="text-2xl font-semibold mb-4">Element Connections</h2>
+		<div class="flex items-center justify-apart align-middle">
+			<h2 class="text-2xl font-semibold mb-4">Last Combination</h2>
+			<div class="bg-gray-800 rounded-lg h-full p-4">
+				{lastElement1} + {lastElement2} = {lastResult}
+			</div>
+		</div>
 		<div class="bg-gray-800 rounded-lg h-full p-4 flex items-center justify-center">
 			<ElementsDragMain bind:this={elementsDragMainComponent} {elements} />
 		</div>

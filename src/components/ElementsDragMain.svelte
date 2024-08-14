@@ -4,6 +4,7 @@
 	import type { DragEventData } from '@neodrag/svelte';
 	import { generateCombination } from '$lib/generateCombinations.js';
 	import { fade } from 'svelte/transition';
+	import { lastCombinedElements } from '$lib/stores.js';
 
 	export let elements: string[];
 
@@ -21,7 +22,8 @@
 	}[] = [];
 	let nextId = 1;
 	let statusMessage = '';
-	let lastCombinedElements = { el1: '', el2: '' };
+	$: ({ lastElement1, lastElement2, lastResult } = $lastCombinedElements);
+
 	let lastResult = '';
 
 	const ELEMENT_PADDING = 10;
@@ -95,7 +97,7 @@
 			el2.isCombining = true;
 			dragElements = [...dragElements];
 
-			lastCombinedElements = { el1: el1.content, el2: el2.content };
+			// lastCombinedElements = { el1: el1.content, el2: el2.content };
 			statusMessage = `Combining ${el1.content} and ${el2.content}...`;
 
 			const newContent = await generateCombination(el1.content, el2.content);
@@ -225,7 +227,7 @@
 	}
 </script>
 
-<div class="status-message" transition:fade>
+<!-- <div class="status-message" transition:fade>
 	{#if statusMessage}
 		<p>{statusMessage}</p>
 	{/if}
@@ -235,7 +237,7 @@
 	{#if lastResult}
 		<p>Result: {lastResult}</p>
 	{/if}
-</div>
+</div> -->
 
 <div class="graph-vis" on:drop={handleDrop} on:dragover={handleDragOver}>
 	{#each dragElements as element (element.id)}
