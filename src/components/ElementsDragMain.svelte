@@ -3,6 +3,7 @@
 	import { draggable } from '@neodrag/svelte';
 	import type { DragEventData } from '@neodrag/svelte';
 	import { generateCombination } from '$lib/generateCombinations.js';
+	import { fade } from 'svelte/transition';
 
 	export let elements: string[];
 
@@ -13,18 +14,69 @@
 		content: string;
 		x: number;
 		y: number;
+		width: number;
+		height: number;
 		isOverlapping: boolean;
 		isCombining: boolean;
 	}[] = [];
 	let nextId = 1;
+	let statusMessage = '';
+
+	const ELEMENT_PADDING = 10;
+	const ELEMENT_MARGIN = 5;
+	const ELEMENT_HEIGHT = 40; // Approximate height of an element
 
 	export function addElement(content: string, x: number, y: number) {
+		const position = findFreePosition();
 		dragElements = [
 			...dragElements,
-			{ id: nextId++, content, x, y, isOverlapping: false, isCombining: false }
+			{
+				id: nextId++,
+				content,
+				x: position.x,
+				y: position.y,
+				width: 0,
+				height: 0,
+				isOverlapping: false,
+				isCombining: false
+			}
 		];
 		checkOverlap();
 		handleDragEnd();
+		updateElementSizes();
+	}
+
+	function findFreePosition() {
+		const containerWidth = document.querySelector('.graph-vis').clientWidth;
+		const containerHeight = document.querySelector('.graph-vis').clientHeight;
+		const rowHeight = ELEMENT_HEIGHT + ELEMENT_PADDING * 2 + ELEMENT_MARGIN;
+		const maxRows = Math.floor(containerHeight / rowHeight);
+
+		for (let attempt = 0; attempt < 100; attempt++) {
+			const row = Math.floor(Math.random() * maxRows);
+			const x = Math.random() * (containerWidth - 100); // 100 is an approximation of element width
+			const y = row * rowHeight;
+
+			if (!isPositionOccupied(x, y)) {
+				return { x, y };
+			}
+		}
+
+		// If we couldn't find a free position, return a random position
+		return {
+			x: Math.random() * (containerWidth - 100),
+			y: Math.random() * (containerHeight - ELEMENT_HEIGHT)
+		};
+	}
+
+	function isPositionOccupied(x: number, y: number) {
+		return dragElements.some(
+			(el) =>
+				x < el.x + el.width + ELEMENT_PADDING * 2 + ELEMENT_MARGIN &&
+				x + 100 > el.x - ELEMENT_PADDING - ELEMENT_MARGIN &&
+				y < el.y + el.height + ELEMENT_PADDING * 2 + ELEMENT_MARGIN &&
+				y + ELEMENT_HEIGHT > el.y - ELEMENT_PADDING - ELEMENT_MARGIN
+		);
 	}
 
 	function removeElement(id: number) {
@@ -39,6 +91,8 @@
 			el2.isCombining = true;
 			dragElements = [...dragElements];
 
+			statusMessage = `Combining ${el1.content} and ${el2.content}...`;
+
 			const newContent = await generateCombination(el1.content, el2.content);
 			dragElements = dragElements.filter((el) => el.id !== id1 && el.id !== id2);
 			dragElements = [
@@ -48,10 +102,17 @@
 					content: newContent,
 					x: el1.x,
 					y: el1.y,
+					width: 0,
+					height: 0,
 					isOverlapping: false,
 					isCombining: false
 				}
 			];
+
+			statusMessage = `Created ${newContent} from ${el1.content} and ${el2.content}`;
+			setTimeout(() => {
+				statusMessage = '';
+			}, 5000);
 		}
 	}
 
@@ -70,9 +131,9 @@
 				if (i !== j) {
 					const el1 = dragElements[i];
 					const el2 = dragElements[j];
-					if (Math.abs(el1.x - el2.x) < 50 && Math.abs(el1.y - el2.y) < 50) {
+					if (isOverlapping(el1, el2)) {
 						el1.isOverlapping = true;
-						break;
+						el2.isOverlapping = true;
 					}
 				}
 			}
@@ -80,12 +141,34 @@
 		dragElements = [...dragElements];
 	}
 
+	function isOverlapping(el1, el2) {
+		const rect1 = {
+			left: el1.x - ELEMENT_PADDING,
+			right: el1.x + el1.width + ELEMENT_PADDING,
+			top: el1.y - ELEMENT_PADDING,
+			bottom: el1.y + el1.height + ELEMENT_PADDING
+		};
+		const rect2 = {
+			left: el2.x - ELEMENT_PADDING,
+			right: el2.x + el2.width + ELEMENT_PADDING,
+			top: el2.y - ELEMENT_PADDING,
+			bottom: el2.y + el2.height + ELEMENT_PADDING
+		};
+
+		return !(
+			rect1.right < rect2.left ||
+			rect1.left > rect2.right ||
+			rect1.bottom < rect2.top ||
+			rect1.top > rect2.bottom
+		);
+	}
+
 	function handleDragEnd() {
 		for (let i = 0; i < dragElements.length; i++) {
 			for (let j = i + 1; j < dragElements.length; j++) {
 				const el1 = dragElements[i];
 				const el2 = dragElements[j];
-				if (Math.abs(el1.x - el2.x) < 50 && Math.abs(el1.y - el2.y) < 50) {
+				if (isOverlapping(el1, el2)) {
 					setTimeout(() => combineElements(el1.id, el2.id), 500);
 					return;
 				}
@@ -107,16 +190,40 @@
 	function handleDragOver(event: DragEvent) {
 		event.preventDefault();
 	}
+
+	onMount(() => {
+		updateElementSizes();
+	});
+
+	function updateElementSizes() {
+		dragElements = dragElements.map((el) => {
+			const element = document.getElementById(`element-${el.id}`);
+			if (element) {
+				const rect = element.getBoundingClientRect();
+				return { ...el, width: rect.width, height: rect.height };
+			}
+			return el;
+		});
+	}
 </script>
+
+<div class="status-message" transition:fade>
+	{statusMessage}
+</div>
 
 <div class="graph-vis" on:drop={handleDrop} on:dragover={handleDragOver}>
 	{#each dragElements as element (element.id)}
 		<div
+			id="element-{element.id}"
 			use:draggable={{
 				position: { x: element.x, y: element.y },
 				bounds: 'parent',
 				onDrag: (e) => handleDrag(element.id, { detail: e }),
-				onDragEnd: handleDragEnd
+				onDragEnd: () => {
+					handleDragEnd();
+					updateElementSizes();
+				},
+				defaultPosition: { x: element.x, y: element.y }
 			}}
 			on:contextmenu|preventDefault={() => removeElement(element.id)}
 			class="draggable-element"
@@ -156,6 +263,19 @@
 
 	.combining {
 		animation: pulse 1s infinite;
+	}
+
+	.status-message {
+		position: absolute;
+		top: 10px;
+		left: 50%;
+		transform: translateX(-50%);
+		background-color: rgba(0, 0, 0, 0.7);
+		color: #fff;
+		padding: 10px 20px;
+		border-radius: 20px;
+		font-weight: bold;
+		z-index: 1000;
 	}
 
 	@keyframes pulse {

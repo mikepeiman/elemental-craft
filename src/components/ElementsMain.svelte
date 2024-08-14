@@ -75,6 +75,11 @@
 	}
 
 	let elementsDragMainComponent;
+	let comboBoardHeight;
+
+	function handleResize() {
+		comboBoardHeight = window.innerHeight - 100; // Adjust this value as needed
+	}
 </script>
 
 <div class="flex h-screen bg-gray-900 text-gray-200">
@@ -84,6 +89,7 @@
 		<div class="flex flex-wrap gap-2">
 			{#each $elements as element}
 				<button
+					on:click={() => selectElement(element)}
 					on:dblclick={() => handleDoubleClick(element)}
 					draggable="true"
 					on:dragstart={(e) => handleDragStart(e, element)}
