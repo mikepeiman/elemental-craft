@@ -347,7 +347,7 @@
 	}
 </script>
 
-<div class="flex h-screen bg-gray-900 text-gray-200">
+<div class="flex h-screen w-screen bg-gray-900 text-gray-200">
 	<!-- Left Sidebar -->
 	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
 		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
