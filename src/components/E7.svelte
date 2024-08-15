@@ -18,7 +18,7 @@
 	let draggedElement = null;
 	let overlappingPair = null;
 	let dragOffset = { x: 0, y: 0 };
-
+	let combiningElements = null;
 	function handleDragStart(event, element) {
 		draggedElement = element;
 		const rect = event.target.getBoundingClientRect();
@@ -51,22 +51,34 @@
 		checkOverlap(id, x, y);
 	}
 
-	function checkOverlap(id, x, y) {
-		const currentElement = $dragElements.find((el) => el.id === id);
-		const otherElements = $dragElements.filter((el) => el.id !== id);
+	function checkOverlap(id) {
+		const currentElement = document.querySelector(`[data-id="${id}"]`);
+		if (!currentElement) return;
+
+		const currentRect = currentElement.getBoundingClientRect();
+		const otherElements = document.querySelectorAll(
+			'.draggable-element:not([data-id="' + id + '"])'
+		);
 
 		overlappingPair = null;
 		for (let element of otherElements) {
-			if (isOverlapping({ x, y }, element)) {
-				overlappingPair = [currentElement, element];
+			if (isOverlapping(currentRect, element.getBoundingClientRect())) {
+				overlappingPair = [
+					$dragElements.find((el) => el.id === id),
+					$dragElements.find((el) => el.id === parseInt(element.dataset.id))
+				];
 				return;
 			}
 		}
 	}
 
-	function isOverlapping(el1, el2) {
-		const buffer = 50;
-		return Math.abs(el1.x - el2.x) < buffer && Math.abs(el1.y - el2.y) < buffer;
+	function isOverlapping(rect1, rect2) {
+		return !(
+			rect1.right < rect2.left ||
+			rect1.left > rect2.right ||
+			rect1.bottom < rect2.top ||
+			rect1.top > rect2.bottom
+		);
 	}
 
 	async function handleNeoDragEnd(event, id) {
