@@ -19,7 +19,9 @@
 	let overlappingPair = null;
 	let dragOffset = { x: 0, y: 0 };
 	let combiningElements = null;
+
 	function handleDragStart(event, element) {
+		console.log(`🚀 ~ handleDragStart ~ element:`, element);
 		draggedElement = element;
 		const rect = event.target.getBoundingClientRect();
 		dragOffset.x = event.clientX - rect.left;
@@ -33,11 +35,13 @@
 	}
 
 	function handleDrop(event) {
+		console.log('🚀 ~ handleDrop');
 		event.preventDefault();
 		const x = event.clientX - mainArea.offsetLeft - dragOffset.x;
 		const y = event.clientY - mainArea.offsetTop - dragOffset.y;
 
 		if (draggedElement) {
+			console.log('🚀 ~ handleDrop ~ Adding new element:', draggedElement);
 			addDragElement({ ...draggedElement, x, y });
 		}
 
@@ -46,6 +50,7 @@
 	}
 
 	function handleNeoDrag(event, id) {
+		console.log('🚀 ~ handleNeoDrag ~ id:', id);
 		const { x, y } = event.detail;
 		updateDragElement(id, { x, y });
 		checkOverlap(id);
@@ -58,15 +63,72 @@
 		checkOverlap(id);
 
 		if (overlappingPair) {
+			console.log('🚀 ~ handleNeoDragEnd ~ Overlapping pair found:', overlappingPair);
 			const [element1, element2] = overlappingPair;
-			await combineElements(element1, element2, x, y);
+			if (element1 && element2) {
+				console.log('🚀 ~ handleNeoDragEnd ~ Both elements exist, attempting to combine');
+				await combineElements(element1, element2, x, y);
+			} else {
+				console.log('🚀 ~ handleNeoDragEnd ~ One or both elements are undefined', {
+					element1,
+					element2
+				});
+			}
+		} else {
+			console.log('🚀 ~ handleNeoDragEnd ~ No overlapping pair found');
 		}
 		overlappingPair = null;
 	}
 
+	async function combineElements(element1, element2, x, y) {
+		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
+		if (!element1 || !element2) {
+			console.log(
+				'🚀 ~ combineElements ~ One or both elements are undefined, aborting combination'
+			);
+			return;
+		}
+
+		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
+		const combinationKey = `${smallerEl},${largerEl}`;
+
+		let newElement;
+		if ($combinations[combinationKey]) {
+			newElement = $combinations[combinationKey];
+			console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
+		} else {
+			console.log('🚀 ~ combineElements ~ Generating new combination');
+			newElement = await generateCombination(smallerEl, largerEl);
+			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
+			if (newElement) {
+				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
+			}
+		}
+
+		if (newElement) {
+			console.log('🚀 ~ combineElements ~ Creating new combined element');
+			removeDragElement(element1.id);
+			removeDragElement(element2.id);
+			addDragElement({
+				content: newElement,
+				x,
+				y,
+				isNew: true,
+				parents: [element1.content, element2.content]
+			});
+			updateLastCombination(smallerEl, largerEl, newElement);
+		} else {
+			console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
+		}
+	}
+
 	function checkOverlap(id) {
+		console.log('🚀 ~ checkOverlap ~ id:', id);
 		const currentElement = document.querySelector(`[data-id="${id}"]`);
-		if (!currentElement) return;
+		if (!currentElement) {
+			console.log('🚀 ~ checkOverlap ~ Current element not found');
+			return;
+		}
 
 		const currentRect = currentElement.getBoundingClientRect();
 		const otherElements = document.querySelectorAll(
@@ -80,50 +142,26 @@
 					$dragElements.find((el) => el.id === id),
 					$dragElements.find((el) => el.id === parseInt(element.dataset.id))
 				];
+				console.log('🚀 ~ checkOverlap ~ Overlap found:', overlappingPair);
 				return;
 			}
 		}
+		console.log('🚀 ~ checkOverlap ~ No overlap found');
 	}
 
 	function isOverlapping(rect1, rect2) {
-		return !(
+		const result = !(
 			rect1.right < rect2.left ||
 			rect1.left > rect2.right ||
 			rect1.bottom < rect2.top ||
 			rect1.top > rect2.bottom
 		);
-	}
-
-	async function combineElements(element1, element2, x, y) {
-		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
-		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
-		const combinationKey = `${smallerEl},${largerEl}`;
-
-		let newElement;
-		if ($combinations[combinationKey]) {
-			newElement = $combinations[combinationKey];
-		} else {
-			newElement = await generateCombination(smallerEl, largerEl);
-			if (newElement) {
-				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
-			}
-		}
-
-		if (newElement) {
-			removeDragElement(element1.id);
-			removeDragElement(element2.id);
-			addDragElement({
-				content: newElement,
-				x,
-				y,
-				isNew: true,
-				parents: [element1.content, element2.content]
-			});
-			updateLastCombination(smallerEl, largerEl, newElement);
-		}
+		console.log('🚀 ~ isOverlapping ~ result:', result);
+		return result;
 	}
 
 	function handleContextMenu(event, id) {
+		console.log('🚀 ~ handleContextMenu ~ id:', id);
 		event.preventDefault();
 		removeDragElement(id);
 	}
@@ -131,8 +169,16 @@
 	onMount(() => {
 		mainArea = document.getElementById('main-area');
 		initializeNextId($dragElements);
+		console.log('🚀 ~ onMount ~ Component mounted');
 	});
+
+	$: {
+		console.log('🚀 ~ Current dragElements:', $dragElements);
+		console.log('🚀 ~ Current overlappingPair:', overlappingPair);
+	}
 </script>
+
+<!-- Rest of your component remains the same -->
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="flex h-screen w-screen bg-gray-900 text-gray-200">
@@ -172,7 +218,7 @@
 						defaultPosition: { x: item.x, y: item.y }
 					}}
 					on:neodrag={(e) => handleNeoDrag(e, item.id)}
-					on:neodragend={(e) => handleNeoDragEnd(e, item.id)}
+					on:neodrag:end={(e) => handleNeoDragEnd(e, item.id)}
 					on:contextmenu={(e) => handleContextMenu(e, item.id)}
 					data-id={item.id}
 					class="draggable-element absolute px-4 py-2 rounded-md cursor-move
