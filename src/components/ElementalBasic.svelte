@@ -7,27 +7,55 @@
 	let mainArea;
 	let dragOffset = { x: 0, y: 0 };
 
-	function handleDragStart(event, item) {
-		draggedItem = item;
+	function handleDragStart(event, item, isNewItem = true) {
+		draggedItem = isNewItem ? item : event.target;
 		const rect = event.target.getBoundingClientRect();
 		dragOffset.x = event.clientX - rect.left;
 		dragOffset.y = event.clientY - rect.top;
-		event.dataTransfer.setData('text/plain', item);
-		event.dataTransfer.effectAllowed = 'copy';
+		event.dataTransfer.setData('text/plain', isNewItem ? item : event.target.id);
+		event.dataTransfer.effectAllowed = 'move';
+		if (!isNewItem) {
+			setTimeout(() => (event.target.style.display = 'none'), 0);
+		}
 	}
 
 	function handleDragOver(event) {
 		event.preventDefault();
-		event.dataTransfer.dropEffect = 'copy';
+		event.dataTransfer.dropEffect = 'move';
 	}
 
 	function handleDrop(event) {
 		event.preventDefault();
-		if (draggedItem) {
-			const rect = mainArea.getBoundingClientRect();
-			const x = event.clientX - rect.left - dragOffset.x;
-			const y = event.clientY - rect.top - dragOffset.y;
+		const rect = mainArea.getBoundingClientRect();
+		const x = Math.max(
+			0,
+			Math.min(
+				event.clientX - rect.left - dragOffset.x,
+				rect.width - (draggedItem.offsetWidth || 100)
+			)
+		);
+		const y = Math.max(
+			0,
+			Math.min(
+				event.clientY - rect.top - dragOffset.y,
+				rect.height - (draggedItem.offsetHeight || 40)
+			)
+		);
+
+		if (typeof draggedItem === 'string') {
+			// New item being dropped
 			droppedItems = [...droppedItems, { id: Date.now(), content: draggedItem, x, y }];
+		} else {
+			// Existing item being moved
+			const id = parseInt(draggedItem.id.split('-')[1]);
+			droppedItems = droppedItems.map((item) => (item.id === id ? { ...item, x, y } : item));
+		}
+		draggedItem = null;
+	}
+
+	function handleDragEnd(event) {
+		if (event.target.style.display === 'none') {
+			event.target.style.display = '';
 		}
 	}
 
@@ -66,6 +94,10 @@
 		<div id="main-area" class="graph-vis bg-gray-800 relative rounded-lg h-full p-4">
 			{#each droppedItems as item (item.id)}
 				<div
+					id="item-{item.id}"
+					draggable="true"
+					on:dragstart={(e) => handleDragStart(e, null, false)}
+					on:dragend={handleDragEnd}
 					class="draggable-element absolute px-4 py-2 bg-gray-700 text-white rounded-md cursor-move"
 					style="left: {item.x}px; top: {item.y}px;"
 				>
