@@ -14,8 +14,8 @@
 		<ThemeSelector /> -->
 	</div>
 	<div class="flex flex-col">
-		<!-- <ElementalBasic /> -->
-		<Elemental />
+		<ElementalBasic />
+		<!-- <Elemental /> -->
 		<!-- <ElementsMain /> -->
 	</div>
 </div>
