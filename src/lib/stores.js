@@ -65,8 +65,16 @@ export function updateLastCombination(element1, element2, result) {
     lastCombination.set({ element1, element2, result });
 }
 
+
 export function addDragElement(element) {
-    dragElements.update(els => [...els, { ...element, x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false }]);
+    dragElements.update(els => [...els, {
+        ...element,
+        width: element.width || 0,
+        height: element.height || 0,
+        isOverlapping: element.isOverlapping || false,
+        isCombining: element.isCombining || false,
+        isNewCombo: element.isNewCombo || false
+    }]);
 }
 
 export function updateDragElement(id, updates) {

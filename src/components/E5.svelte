@@ -300,7 +300,6 @@
 			{#each $elements as element}
 				<div
 					draggable="true"
-					style="left: {element.x}px; top: {element.y}px;"
 					on:dragstart={(e) => startElementDrag(e, element)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
@@ -367,7 +366,7 @@
 					class:combining={element.isCombining}
 					class:new-combo={element.isNewCombo}
 					class:existing-combo={element.isCombining && !element.isNewCombo}
-					style="left: {element.x}px; top: {element.y}px;"
+					style="transform: translate({element.x}px, {element.y}px)"
 				>
 					{element.content}
 				</div>

@@ -11,15 +11,18 @@
 	} from '$lib/stores.js';
 	import { generateCombination } from '$lib/generateCombinations.js';
 
+	let draggedItem = null;
 	let mainArea;
 	let dragOffset = { x: 0, y: 0 };
 
 	function handleDragStart(event, item) {
+		draggedItem = item;
 		const rect = event.target.getBoundingClientRect();
 		dragOffset.x = event.clientX - rect.left;
 		dragOffset.y = event.clientY - rect.top;
 		event.dataTransfer.setData('text/plain', JSON.stringify(item));
 		event.dataTransfer.effectAllowed = 'move';
+		console.log('Drag started:', item, 'Offset:', dragOffset);
 	}
 
 	function handleDragOver(event) {
@@ -30,15 +33,26 @@
 	function handleDrop(event) {
 		event.preventDefault();
 		const rect = mainArea.getBoundingClientRect();
-		const x = event.clientX - rect.left - dragOffset.x;
-		const y = event.clientY - rect.top - dragOffset.y;
+		const rawX = event.clientX - rect.left - dragOffset.x;
+		const rawY = event.clientY - rect.top - dragOffset.y;
 
-		const droppedItem = JSON.parse(event.dataTransfer.getData('text/plain'));
-		addDragElement({ ...droppedItem, x, y });
+		// Divide by 2 to compensate for the doubling effect
+		const x = Math.max(0, Math.min(rawX / 2, rect.width - 100)); // Assuming item width is 100px
+		const y = Math.max(0, Math.min(rawY / 2, rect.height - 40)); // Assuming item height is 40px
+
+		console.log('Drop position:', { x, y });
+
+		if (draggedItem) {
+			const newItem = { ...draggedItem, id: Date.now(), x, y };
+			console.log('Adding new item:', newItem);
+			addDragElement(newItem);
+			draggedItem = null;
+		}
 	}
 
 	function handleNeoDrag(event, id) {
 		const { x, y } = event.detail;
+		console.log('NeoDrag update:', id, { x, y });
 		updateDragElement(id, { x, y });
 		checkCombinations(id);
 	}
@@ -73,6 +87,8 @@
 			mainArea.removeEventListener('drop', handleDrop);
 		};
 	});
+
+	$: console.log('Current dragElements:', $dragElements);
 </script>
 
 <div class="flex h-screen w-screen bg-gray-900 text-gray-200">
@@ -103,12 +119,11 @@
 				<div
 					use:draggable={{
 						bounds: 'parent',
-						defaultPosition: { x: item.x, y: item.y },
-						position: { x: item.x, y: item.y }
+						defaultPosition: { x: item.x, y: item.y }
 					}}
 					on:neodrag={(e) => handleNeoDrag(e, item.id)}
-					class="draggable-element absolute px-4 py-2 bg-gray-700 text-white rounded-md cursor-move"
-					style="transform: translate({item.x}px, {item.y}px);"
+					style="position: absolute; left: {item.x}px; top: {item.y}px;"
+					class="draggable-element px-4 py-2 bg-gray-700 text-white rounded-md cursor-move"
 				>
 					{item.content}
 				</div>
