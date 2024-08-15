@@ -52,7 +52,7 @@ export function addDragElement(element) {
     dragElements.update(els => {
         const newElement = {
             ...element,
-            id: element.id || getNextId(),
+            id: getNextId(),
             x: element.x || 0,
             y: element.y || 0
         };

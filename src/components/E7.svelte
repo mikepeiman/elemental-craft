@@ -1,6 +1,17 @@
 <script>
 	import { onMount } from 'svelte';
-	import { elements, dragElements, lastCombination, combinations } from '$lib/stores.js';
+	import { draggable } from '@neodrag/svelte';
+	import {
+		elements,
+		dragElements,
+		lastCombination,
+		combinations,
+		addDragElement,
+		updateDragElement,
+		removeDragElement,
+		initializeNextId,
+		updateLastCombination
+	} from '$lib/stores.js';
 	import { generateCombination } from '$lib/generateCombinations.js';
 
 	let mainArea;
@@ -14,18 +25,11 @@
 		dragOffset.x = event.clientX - rect.left;
 		dragOffset.y = event.clientY - rect.top;
 		event.dataTransfer.setData('text/plain', JSON.stringify(element));
-		event.dataTransfer.effectAllowed = 'move';
 	}
 
 	function handleDragOver(event) {
 		event.preventDefault();
-		const draggedOver = getDraggedOverElement(event.clientX, event.clientY);
-
-		if (draggedOver && draggedOver !== draggedElement) {
-			overlappingPair = [draggedElement, draggedOver];
-		} else {
-			overlappingPair = null;
-		}
+		event.dataTransfer.dropEffect = 'move';
 	}
 
 	function handleDrop(event) {
@@ -34,35 +38,48 @@
 		const y = event.clientY - mainArea.offsetTop - dragOffset.y;
 
 		if (draggedElement) {
-			if (overlappingPair) {
-				combineElements(overlappingPair[0], overlappingPair[1], x, y);
-			} else if (draggedElement.id) {
-				// Move existing element
-				updateElementPosition(draggedElement.id, x, y);
-			} else {
-				// Add new element from sidebar
-				addElement(draggedElement, x, y);
-			}
+			addDragElement({ ...draggedElement, x, y });
 		}
 
 		draggedElement = null;
 		overlappingPair = null;
 	}
 
-	function handleDragEnd() {
-		draggedElement = null;
-		overlappingPair = null;
+	function handleNeoDrag(event, id) {
+		const { x, y } = event.detail;
+		updateDragElement(id, { x, y });
+		checkOverlap(id, x, y);
 	}
 
-	function getDraggedOverElement(x, y) {
-		const elements = document.elementsFromPoint(x, y);
-		for (let el of elements) {
-			if (el.classList.contains('draggable-element')) {
-				const id = parseInt(el.dataset.id);
-				return $dragElements.find((item) => item.id === id);
+	function checkOverlap(id, x, y) {
+		const currentElement = $dragElements.find((el) => el.id === id);
+		const otherElements = $dragElements.filter((el) => el.id !== id);
+
+		overlappingPair = null;
+		for (let element of otherElements) {
+			if (isOverlapping({ x, y }, element)) {
+				overlappingPair = [currentElement, element];
+				return;
 			}
 		}
-		return null;
+	}
+
+	function isOverlapping(el1, el2) {
+		const buffer = 50;
+		return Math.abs(el1.x - el2.x) < buffer && Math.abs(el1.y - el2.y) < buffer;
+	}
+
+	async function handleNeoDragEnd(event, id) {
+		const { x, y } = event.detail;
+		console.log(`🚀 ~ handleNeoDragEnd ~ x, y:`, x, y);
+		updateDragElement(id, { x, y });
+		checkOverlap(id, x, y);
+
+		if (overlappingPair) {
+			const [element1, element2] = overlappingPair;
+			await combineElements(element1, element2, x, y);
+		}
+		overlappingPair = null;
 	}
 
 	async function combineElements(element1, element2, x, y) {
@@ -74,31 +91,33 @@
 			newElement = $combinations[combinationKey];
 		} else {
 			newElement = await generateCombination(smallerEl, largerEl);
+			if (newElement) {
+				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
+			}
 		}
 
 		if (newElement) {
-			dragElements.update((els) =>
-				els
-					.filter((el) => el.id !== element1.id && el.id !== element2.id)
-					.concat([{ id: Date.now(), content: newElement, x, y, isNew: true }])
-			);
-			lastCombination.set({ element1: smallerEl, element2: largerEl, result: newElement });
+			removeDragElement(element1.id);
+			removeDragElement(element2.id);
+			addDragElement({
+				content: newElement,
+				x,
+				y,
+				isNew: true,
+				parents: [element1.content, element2.content]
+			});
+			updateLastCombination(smallerEl, largerEl, newElement);
 		}
 	}
 
-	function addElement(element, x, y) {
-		dragElements.update((els) => [
-			...els,
-			{ id: Date.now(), content: element.content, x, y, isNew: false }
-		]);
-	}
-
-	function updateElementPosition(id, x, y) {
-		dragElements.update((els) => els.map((el) => (el.id === id ? { ...el, x, y } : el)));
+	function handleContextMenu(event, id) {
+		event.preventDefault();
+		removeDragElement(id);
 	}
 
 	onMount(() => {
 		mainArea = document.getElementById('main-area');
+		initializeNextId($dragElements);
 	});
 </script>
 
@@ -133,12 +152,16 @@
 		>
 			{#each $dragElements as item (item.id)}
 				<div
-					draggable="true"
-					on:dragstart={(e) => handleDragStart(e, item)}
-					on:dragend={handleDragEnd}
+					use:draggable={{
+						bounds: 'parent',
+						axis: 'both',
+						defaultPosition: { x: item.x, y: item.y }
+					}}
+					on:neodrag={(e) => handleNeoDrag(e, item.id)}
+					on:neodragend={(e) => handleNeoDragEnd(e, item.id)}
+					on:contextmenu={(e) => handleContextMenu(e, item.id)}
 					data-id={item.id}
-					style="position: absolute; left: {item.x}px; top: {item.y}px;"
-					class="draggable-element px-4 py-2 rounded-md cursor-move
+					class="draggable-element absolute px-4 py-2 rounded-md cursor-move
                         {overlappingPair && overlappingPair.some((el) => el.id === item.id)
 						? 'ring-2 ring-yellow-400'
 						: ''}
@@ -153,7 +176,7 @@
 
 <style>
 	.draggable-element {
-		transition: none;
+		touch-action: none;
 		user-select: none;
 	}
 </style>
