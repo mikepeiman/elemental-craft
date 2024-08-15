@@ -1,9 +1,10 @@
 <script>
-	import Elemental from '../components/Elemental.svelte';
-	import ElementalBasic from '../components/ElementalBasic.svelte';
-	import ElementalNeodrag from '../components/ElementalNeodrag.svelte';
-	import ElementsMain from '../components/ElementsMain.svelte';
-	import ThemeSelector from '../components/ThemeSelector.svelte';
+	import E6 from '../components/E6.svelte';
+	// import Elemental from '../components/Elemental.svelte';
+	// import ElementalBasic from '../components/ElementalBasic.svelte';
+	// import ElementalNeodrag from '../components/ElementalNeodrag.svelte';
+	// import ElementsMain from '../components/ElementsMain.svelte';
+	// import ThemeSelector from '../components/ThemeSelector.svelte';
 </script>
 
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
@@ -16,7 +17,9 @@
 	</div>
 	<div class="flex flex-col">
 		<!-- <ElementalBasic /> -->
-		<ElementalNeodrag />
+		<!-- <ElementalNeodrag /> -->
+		<E6 />
+
 		<!-- <Elemental /> -->
 		<!-- <ElementsMain /> -->
 	</div>

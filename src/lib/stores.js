@@ -3,36 +3,41 @@ import { browser } from '$app/environment';
 
 function createPersistentStore(key, initialValue) {
     const storedValue = browser ? localStorage.getItem(key) : null;
-    const store = writable(storedValue ? JSON.parse(storedValue) : initialValue);
+    const { subscribe, set, update } = writable(storedValue ? JSON.parse(storedValue) : initialValue);
 
     if (browser) {
-        store.subscribe(value => {
+        subscribe(value => {
             localStorage.setItem(key, JSON.stringify(value));
         });
     }
 
     return {
-        ...store,
-        reset: () => store.set(initialValue)
+        subscribe,
+        set,
+        update,
+        reset: () => set(initialValue)
     };
 }
 
-const initialElements = [
-    { id: 1, content: 'Water', parents: [], x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false },
-    { id: 2, content: 'Fire', parents: [], x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false },
-    { id: 3, content: 'Earth', parents: [], x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false },
-    { id: 4, content: 'Air', parents: [], x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false },
-    { id: 5, content: 'Spirit', parents: [], x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false }
-];
+export const elements = createPersistentStore('elements', [
+    { id: 1, content: 'Water', parents: [] },
+    { id: 2, content: 'Fire', parents: [] },
+    { id: 3, content: 'Earth', parents: [] },
+    { id: 4, content: 'Air', parents: [] },
+    { id: 5, content: 'Spirit', parents: [] }
+]);
 
-export const elements = createPersistentStore('elements', initialElements);
 export const combinations = createPersistentStore('combinations', {});
 
-export const lastElement1 = writable({ content: '' });
-export const lastElement2 = writable({ content: '' });
-export const lastResult = writable({ content: '' });
+export const dragElements = createPersistentStore('dragElements', []);
 
-export const generationStore = writable({
+export const lastCombination = createPersistentStore('lastCombination', {
+    element1: '',
+    element2: '',
+    result: ''
+});
+
+export const generationStore = createPersistentStore('generationStore', {
     isGenerating: false,
     shouldStop: false
 });
@@ -47,4 +52,27 @@ export function stopGeneration() {
 
 export function resetGeneration() {
     generationStore.set({ isGenerating: false, shouldStop: false });
+}
+
+export function addElement(content) {
+    elements.update(els => {
+        const newId = Math.max(0, ...els.map(el => el.id)) + 1;
+        return [...els, { id: newId, content, parents: [] }];
+    });
+}
+
+export function updateLastCombination(element1, element2, result) {
+    lastCombination.set({ element1, element2, result });
+}
+
+export function addDragElement(element) {
+    dragElements.update(els => [...els, { ...element, x: 0, y: 0, width: 0, height: 0, isOverlapping: false, isCombining: false, isNewCombo: false }]);
+}
+
+export function updateDragElement(id, updates) {
+    dragElements.update(els => els.map(el => el.id === id ? { ...el, ...updates } : el));
+}
+
+export function removeDragElement(id) {
+    dragElements.update(els => els.filter(el => el.id !== id));
 }
