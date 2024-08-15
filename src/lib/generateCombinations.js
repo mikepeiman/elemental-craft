@@ -1,12 +1,14 @@
+// $lib/generateCombinations.js
+
 import { get } from 'svelte/store';
-import { elements, combinations, generationStore } from './stores.js';
-import { updateLastCombination } from './stores.js';
+import { elements, combinations, generationStore, updateLastCombination } from './stores.js';
 
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
   const existingCombination = get(combinations)[key];
 
   if (existingCombination) {
+    updateLastCombination(element1, element2, existingCombination);
     return existingCombination;
   }
 
@@ -23,14 +25,14 @@ export async function generateCombination(element1, element2) {
       // Update stores
       combinations.update(c => ({ ...c, [key]: combination }));
       elements.update(e => {
-        if (!e.includes(combination)) {
-          return [...e, combination];
+        if (!e.some(el => el.content === combination)) {
+          return [...e, { id: Date.now(), content: combination, parents: [element1, element2] }];
         }
         return e;
       });
 
       console.log(`Generated: ${element1} + ${element2} = ${combination}`);
-      updateRecentStore(element1, element2, combination);
+      updateLastCombination(element1, element2, combination);
       return combination;
     }
   } catch (error) {
@@ -40,13 +42,8 @@ export async function generateCombination(element1, element2) {
   return null;
 }
 
-function updateRecentStore(newEl1, newEl2, newResult) {
-  console.log(`🚀 ~ updateRecentStore ~ newEl1, newEl2, newResult:`, newEl1, newEl2, newResult);
-  updateLastCombination(newEl1, newEl2, newResult);
-}
-
 export async function generateRandomCombinations(count) {
-  generationStore.startGeneration();
+  generationStore.update(state => ({ ...state, isGenerating: true, shouldStop: false }));
 
   for (let i = 0; i < count; i++) {
     const generationState = get(generationStore);
@@ -55,8 +52,8 @@ export async function generateRandomCombinations(count) {
     }
 
     const elementArray = get(elements);
-    const element1 = elementArray[Math.floor(Math.random() * elementArray.length)];
-    const element2 = elementArray[Math.floor(Math.random() * elementArray.length)];
+    const element1 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
+    const element2 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
 
     if (element1 !== element2) {
       await generateCombination(element1, element2);
@@ -66,5 +63,5 @@ export async function generateRandomCombinations(count) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 
-  generationStore.reset();
+  generationStore.update(state => ({ ...state, isGenerating: false, shouldStop: false }));
 }

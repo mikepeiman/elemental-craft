@@ -1,21 +1,21 @@
+// $lib/stores.js
+
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
 function createPersistentStore(key, initialValue) {
     const storedValue = browser ? localStorage.getItem(key) : null;
-    const { subscribe, set, update } = writable(storedValue ? JSON.parse(storedValue) : initialValue);
+    const store = writable(storedValue ? JSON.parse(storedValue) : initialValue);
 
     if (browser) {
-        subscribe(value => {
+        store.subscribe(value => {
             localStorage.setItem(key, JSON.stringify(value));
         });
     }
 
     return {
-        subscribe,
-        set,
-        update,
-        reset: () => set(initialValue)
+        ...store,
+        reset: () => store.set(initialValue)
     };
 }
 
@@ -42,6 +42,43 @@ export const generationStore = createPersistentStore('generationStore', {
     shouldStop: false
 });
 
+let nextId = 1;
+
+function getNextId() {
+    return nextId++;
+}
+
+export function addDragElement(element) {
+    dragElements.update(els => {
+        const newElement = {
+            ...element,
+            id: element.id || getNextId(),
+            x: element.x || 0,
+            y: element.y || 0
+        };
+        return [...els, newElement];
+    });
+}
+
+export function updateDragElement(id, updates) {
+    dragElements.update(els =>
+        els.map(el => el.id === id ? { ...el, ...updates, x: updates.x ?? el.x, y: updates.y ?? el.y } : el)
+    );
+}
+
+export function removeDragElement(id) {
+    dragElements.update(els => els.filter(el => el.id !== id));
+}
+
+export function initializeNextId(elements) {
+    nextId = Math.max(...elements.map(el => el.id), 0) + 1;
+}
+
+export function updateLastCombination(element1, element2, result) {
+    lastCombination.set({ element1, element2, result });
+}
+
+// Add these functions for the generationStore
 export function startGeneration() {
     generationStore.update(state => ({ ...state, isGenerating: true, shouldStop: false }));
 }
@@ -52,35 +89,4 @@ export function stopGeneration() {
 
 export function resetGeneration() {
     generationStore.set({ isGenerating: false, shouldStop: false });
-}
-
-export function addElement(content) {
-    elements.update(els => {
-        const newId = Math.max(0, ...els.map(el => el.id)) + 1;
-        return [...els, { id: newId, content, parents: [] }];
-    });
-}
-
-export function updateLastCombination(element1, element2, result) {
-    lastCombination.set({ element1, element2, result });
-}
-
-
-export function addDragElement(element) {
-    dragElements.update(els => [...els, {
-        ...element,
-        width: element.width || 0,
-        height: element.height || 0,
-        isOverlapping: element.isOverlapping || false,
-        isCombining: element.isCombining || false,
-        isNewCombo: element.isNewCombo || false
-    }]);
-}
-
-export function updateDragElement(id, updates) {
-    dragElements.update(els => els.map(el => el.id === id ? { ...el, ...updates } : el));
-}
-
-export function removeDragElement(id) {
-    dragElements.update(els => els.filter(el => el.id !== id));
 }
