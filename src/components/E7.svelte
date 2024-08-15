@@ -6,10 +6,15 @@
 	let mainArea;
 	let draggedElement = null;
 	let overlappingPair = null;
+	let dragOffset = { x: 0, y: 0 };
 
 	function handleDragStart(event, element) {
 		draggedElement = element;
+		const rect = event.target.getBoundingClientRect();
+		dragOffset.x = event.clientX - rect.left;
+		dragOffset.y = event.clientY - rect.top;
 		event.dataTransfer.setData('text/plain', JSON.stringify(element));
+		event.dataTransfer.effectAllowed = 'move';
 	}
 
 	function handleDragOver(event) {
@@ -25,13 +30,17 @@
 
 	function handleDrop(event) {
 		event.preventDefault();
-		const x = event.clientX - mainArea.offsetLeft;
-		const y = event.clientY - mainArea.offsetTop;
+		const x = event.clientX - mainArea.offsetLeft - dragOffset.x;
+		const y = event.clientY - mainArea.offsetTop - dragOffset.y;
 
 		if (draggedElement) {
 			if (overlappingPair) {
 				combineElements(overlappingPair[0], overlappingPair[1], x, y);
+			} else if (draggedElement.id) {
+				// Move existing element
+				updateElementPosition(draggedElement.id, x, y);
 			} else {
+				// Add new element from sidebar
 				addElement(draggedElement, x, y);
 			}
 		}
@@ -82,6 +91,10 @@
 			...els,
 			{ id: Date.now(), content: element.content, x, y, isNew: false }
 		]);
+	}
+
+	function updateElementPosition(id, x, y) {
+		dragElements.update((els) => els.map((el) => (el.id === id ? { ...el, x, y } : el)));
 	}
 
 	onMount(() => {
