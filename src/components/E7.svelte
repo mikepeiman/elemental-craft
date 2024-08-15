@@ -50,16 +50,21 @@
 	}
 
 	function handleNeoDrag(event, id) {
-		console.log('🚀 ~ handleNeoDrag ~ id:', id);
-		const { x, y } = event.detail;
-		updateDragElement(id, { x, y });
+		// console.log('🚀 ~ handleNeoDrag ~ id:', id);
+		const { offsetX, offsetY } = event.detail;
+		updateDragElement(id, { x: offsetX, y: offsetY });
 		checkOverlap(id);
 	}
 
 	async function handleNeoDragEnd(event, id) {
+		console.log(`🚀 ~ handleNeoDragEnd ~ event:`, event);
 		console.log(`🚀 ~ handleNeoDragEnd ~ id:`, id);
-		const { x, y } = event.detail;
-		updateDragElement(id, { x, y });
+		const { offsetX, offsetY } = event.detail;
+		updateDragElement(id, { x: offsetX, y: offsetY });
+		const item = $dragElements.find((item) => {
+			return item.id === id;
+		});
+		console.log(`🚀 ~ handleNeoDragEnd ~ item:`, item);
 		checkOverlap(id);
 
 		if (overlappingPair) {
@@ -123,7 +128,7 @@
 	}
 
 	function checkOverlap(id) {
-		console.log('🚀 ~ checkOverlap ~ id:', id);
+		// console.log('🚀 ~ checkOverlap ~ id:', id);
 		const currentElement = document.querySelector(`[data-id="${id}"]`);
 		if (!currentElement) {
 			console.log('🚀 ~ checkOverlap ~ Current element not found');
@@ -146,7 +151,7 @@
 				return;
 			}
 		}
-		console.log('🚀 ~ checkOverlap ~ No overlap found');
+		// console.log('🚀 ~ checkOverlap ~ No overlap found');
 	}
 
 	function isOverlapping(rect1, rect2) {
@@ -172,10 +177,10 @@
 		console.log('🚀 ~ onMount ~ Component mounted');
 	});
 
-	$: {
-		console.log('🚀 ~ Current dragElements:', $dragElements);
-		console.log('🚀 ~ Current overlappingPair:', overlappingPair);
-	}
+	// $: {
+	// 	console.log('🚀 ~ Current dragElements:', $dragElements);
+	// 	console.log('🚀 ~ Current overlappingPair:', overlappingPair);
+	// }
 </script>
 
 <!-- Rest of your component remains the same -->
