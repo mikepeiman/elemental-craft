@@ -48,7 +48,20 @@
 	function handleNeoDrag(event, id) {
 		const { x, y } = event.detail;
 		updateDragElement(id, { x, y });
-		checkOverlap(id, x, y);
+		checkOverlap(id);
+	}
+
+	async function handleNeoDragEnd(event, id) {
+		console.log(`🚀 ~ handleNeoDragEnd ~ id:`, id);
+		const { x, y } = event.detail;
+		updateDragElement(id, { x, y });
+		checkOverlap(id);
+
+		if (overlappingPair) {
+			const [element1, element2] = overlappingPair;
+			await combineElements(element1, element2, x, y);
+		}
+		overlappingPair = null;
 	}
 
 	function checkOverlap(id) {
@@ -81,20 +94,8 @@
 		);
 	}
 
-	async function handleNeoDragEnd(event, id) {
-		const { x, y } = event.detail;
-		console.log(`🚀 ~ handleNeoDragEnd ~ x, y:`, x, y);
-		updateDragElement(id, { x, y });
-		checkOverlap(id, x, y);
-
-		if (overlappingPair) {
-			const [element1, element2] = overlappingPair;
-			await combineElements(element1, element2, x, y);
-		}
-		overlappingPair = null;
-	}
-
 	async function combineElements(element1, element2, x, y) {
+		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
 		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
 		const combinationKey = `${smallerEl},${largerEl}`;
 
@@ -133,6 +134,7 @@
 	});
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="flex h-screen w-screen bg-gray-900 text-gray-200">
 	<!-- Left Sidebar -->
 	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
