@@ -1,5 +1,6 @@
 <script>
 	import E6 from '../components/E6.svelte';
+	import E7 from '../components/E7.svelte';
 	// import Elemental from '../components/Elemental.svelte';
 	// import ElementalBasic from '../components/ElementalBasic.svelte';
 	// import ElementalNeodrag from '../components/ElementalNeodrag.svelte';
@@ -18,7 +19,8 @@
 	<div class="flex flex-col">
 		<!-- <ElementalBasic /> -->
 		<!-- <ElementalNeodrag /> -->
-		<E6 />
+		<!-- <E6 /> -->
+		<E7 />
 
 		<!-- <Elemental /> -->
 		<!-- <ElementsMain /> -->

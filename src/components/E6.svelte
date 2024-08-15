@@ -24,7 +24,7 @@
 	let mounted = false;
 	let randomCombinationCount = 10;
 	let isGenerating = false;
-	let isCombining = false;
+	let combiningElements = null;
 
 	function handleDragStart(event, item) {
 		draggedItem = item;
@@ -57,45 +57,57 @@
 	}
 
 	async function handleNeoDrag(event, id) {
-		if (isCombining) return;
 		const { x, y } = event.detail;
 		updateDragElement(id, { x, y });
-		const movedItem = $dragElements.find((item) => item.id === id);
-		await checkCombinations(movedItem);
+		await checkOverlap(id);
 	}
 
-	async function checkCombinations(movedItem) {
-		if (isCombining) return;
-		isCombining = true;
+	async function checkOverlap(movedItemId) {
+		const movedItem = $dragElements.find((item) => item.id === movedItemId);
+		let overlappingItem = null;
 
 		for (let item of $dragElements) {
-			if (item.id !== movedItem.id && isOverlapping(movedItem, item)) {
-				const [element1, element2] = [movedItem.content, item.content].sort();
-				const combinationKey = `${element1},${element2}`;
-
-				let newElement;
-				if ($combinations[combinationKey]) {
-					newElement = $combinations[combinationKey];
-				} else {
-					newElement = await generateCombination(element1, element2);
-				}
-
-				if (newElement) {
-					removeDragElement(movedItem.id);
-					removeDragElement(item.id);
-					const newId = Date.now();
-					addDragElement({
-						id: newId,
-						content: newElement,
-						x: (movedItem.x + item.x) / 2,
-						y: (movedItem.y + item.y) / 2
-					});
-					break;
-				}
+			if (item.id !== movedItemId && isOverlapping(movedItem, item)) {
+				overlappingItem = item;
+				break;
 			}
 		}
 
-		isCombining = false;
+		if (overlappingItem) {
+			combiningElements = { item1: movedItem, item2: overlappingItem };
+		} else {
+			combiningElements = null;
+		}
+	}
+
+	async function handleCombine() {
+		if (!combiningElements) return;
+
+		const { item1, item2 } = combiningElements;
+		const [element1, element2] = [item1.content, item2.content].sort();
+		const combinationKey = `${element1},${element2}`;
+
+		let newElement;
+		if ($combinations[combinationKey]) {
+			newElement = $combinations[combinationKey];
+		} else {
+			newElement = await generateCombination(element1, element2);
+		}
+
+		if (newElement) {
+			removeDragElement(item1.id);
+			removeDragElement(item2.id);
+			const newId = Date.now();
+			addDragElement({
+				id: newId,
+				content: newElement,
+				x: (item1.x + item2.x) / 2,
+				y: (item1.y + item2.y) / 2,
+				isNewCombo: !$combinations[combinationKey]
+			});
+		}
+
+		combiningElements = null;
 	}
 
 	function isOverlapping(item1, item2) {
@@ -195,8 +207,14 @@
 								defaultPosition: { x: item.x, y: item.y }
 							}}
 							on:neodrag={(e) => handleNeoDrag(e, item.id)}
+							on:neodragend={() => handleCombine()}
 							style="position: absolute; left: {item.x}px; top: {item.y}px;"
-							class="draggable-element px-4 py-2 bg-gray-700 text-white rounded-md cursor-move"
+							class="draggable-element px-4 py-2 rounded-md cursor-move
+                                {combiningElements &&
+							(combiningElements.item1.id === item.id || combiningElements.item2.id === item.id)
+								? 'overlapping'
+								: ''}
+                                {item.isNewCombo ? 'new-combo' : 'existing-combo'}"
 						>
 							{item.content}
 						</div>
@@ -215,5 +233,33 @@
 
 	.draggable-element {
 		transition: none;
+	}
+
+	.overlapping {
+		@apply shadow-lg border-2 border-yellow-400;
+	}
+
+	.new-combo {
+		@apply bg-green-700;
+	}
+
+	.existing-combo {
+		@apply bg-red-700;
+	}
+
+	@keyframes pulse {
+		0% {
+			box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+		}
+		70% {
+			box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+		}
+		100% {
+			box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+		}
+	}
+
+	.combining {
+		animation: pulse 1s infinite;
 	}
 </style>
