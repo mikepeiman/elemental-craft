@@ -45,48 +45,20 @@
 			draggedItem = null;
 		}
 	}
-	let mouseX = 0,
-		mouseY = 0;
-	$: mouseX, mouseY;
-	$: console.log(`🚀 ~ mouseX, mouseY:`, mouseX, mouseY);
-	function handleMouseMove(event) {
-		mouseX = event.clientX;
-		mouseY = event.clientY;
-	}
-
-	function notePosition(event) {
-		mouseX = event.clientX;
-		mouseY = event.clientY;
-		console.log(`🚀 ~ notePosition ~ mouseX, mouseY:`, mouseX, mouseY);
-	}
 
 	function handleNeoDrag(event, id) {
 		const { x, y } = event.detail;
 		droppedItems = droppedItems.map((item) => (item.id === id ? { ...item, x, y } : item));
 	}
 
-	function handleNeoDragEnd(event, id) {
-		console.log(`🚀 ~ handleNeoDragEnd ~ event:`, event);
-
-		const { offsetX, offsetY } = event.detail;
-		let x = offsetX;
-		let y = offsetY;
-		droppedItems = droppedItems.map((item) => (item.id === id ? { ...item, x, y } : item));
-		droppedItems.forEach((item) => {
-			console.log(`🚀 ~ items.forEach ~ item:`, item);
-		});
-	}
-
 	onMount(() => {
 		mainArea = document.getElementById('main-area');
 		mainArea.addEventListener('dragover', handleDragOver);
 		mainArea.addEventListener('drop', handleDrop);
-		mainArea.addEventListener('mouseup', handleMouseMove);
 
 		return () => {
 			mainArea.removeEventListener('dragover', handleDragOver);
 			mainArea.removeEventListener('drop', handleDrop);
-			mainArea.removeEventListener('mouseup', handleMouseMove);
 		};
 	});
 </script>
@@ -100,7 +72,6 @@
 				<div
 					draggable="true"
 					on:dragstart={(e) => handleDragStart(e, item)}
-					on:mouseup={notePosition}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
 					{item}
@@ -114,12 +85,9 @@
 		<h2 class="text-2xl font-semibold mb-4">Dropped Elements</h2>
 		<div id="main-area" class="graph-vis bg-gray-800 relative rounded-lg h-full p-4">
 			{#each droppedItems as item (item.id)}
-				<!-- style="left: {item.x}px; top: {item.y}px;" -->
 				<div
 					use:draggable={{ bounds: 'parent' }}
 					on:neodrag={(e) => handleNeoDrag(e, item.id)}
-					on:neodrag:end={(e) => handleNeoDragEnd(e, item.id)}
-					on:mouseup={notePosition}
 					style="left: {item.x}px; top: {item.y}px;"
 					class="draggable-element absolute px-4 py-2 bg-gray-700 text-white rounded-md cursor-move"
 				>
