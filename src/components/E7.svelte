@@ -60,7 +60,9 @@
 		console.log(`🚀 ~ handleNeoDragEnd ~ event:`, event);
 		console.log(`🚀 ~ handleNeoDragEnd ~ id:`, id);
 		const { offsetX, offsetY } = event.detail;
-		updateDragElement(id, { x: offsetX, y: offsetY });
+		let x = offsetX;
+		let y = offsetY;
+		updateDragElement(id, { x, y });
 		const item = $dragElements.find((item) => {
 			return item.id === id;
 		});
