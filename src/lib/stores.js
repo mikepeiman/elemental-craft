@@ -42,7 +42,7 @@ export const generationStore = createPersistentStore('generationStore', {
     shouldStop: false
 });
 
-let nextId = 1;
+let nextId = Date.now();
 
 function getNextId() {
     return nextId++;

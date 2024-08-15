@@ -1,7 +1,7 @@
 // $lib/generateCombinations.js
 
 import { get } from 'svelte/store';
-import { elements, combinations, generationStore, updateLastCombination } from './stores.js';
+import { elements, combinations, updateLastCombination } from './stores.js';
 
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
@@ -42,12 +42,13 @@ export async function generateCombination(element1, element2) {
   return null;
 }
 
+let shouldStopGeneration = false;
+
 export async function generateRandomCombinations(count) {
-  generationStore.update(state => ({ ...state, isGenerating: true, shouldStop: false }));
+  shouldStopGeneration = false;
 
   for (let i = 0; i < count; i++) {
-    const generationState = get(generationStore);
-    if (generationState.shouldStop) {
+    if (shouldStopGeneration) {
       break;
     }
 
@@ -63,5 +64,9 @@ export async function generateRandomCombinations(count) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 
-  generationStore.update(state => ({ ...state, isGenerating: false, shouldStop: false }));
+  shouldStopGeneration = false;
+}
+
+export function stopRandomGeneration() {
+  shouldStopGeneration = true;
 }

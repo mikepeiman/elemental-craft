@@ -489,19 +489,6 @@
 		background-color: #a44a;
 	}
 
-	.status-message {
-		position: absolute;
-		top: 10px;
-		left: 50%;
-		transform: translateX(-50%);
-		background-color: rgba(0, 0, 0, 0.7);
-		color: #fff;
-		padding: 10px 20px;
-		border-radius: 20px;
-		font-weight: bold;
-		z-index: 1000;
-	}
-
 	@keyframes pulse {
 		0% {
 			box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);

@@ -5,12 +5,17 @@
 		elements,
 		dragElements,
 		lastCombination,
+		combinations,
 		addDragElement,
 		updateDragElement,
 		removeDragElement,
 		initializeNextId
 	} from '$lib/stores.js';
-	import { generateCombination, generateRandomCombinations } from '$lib/generateCombinations.js';
+	import {
+		generateCombination,
+		generateRandomCombinations,
+		stopRandomGeneration
+	} from '$lib/generateCombinations.js';
 	import { tick } from 'svelte';
 
 	let draggedItem = null;
@@ -19,6 +24,7 @@
 	let mounted = false;
 	let randomCombinationCount = 10;
 	let isGenerating = false;
+	let isCombining = false;
 
 	function handleDragStart(event, item) {
 		draggedItem = item;
@@ -34,7 +40,7 @@
 		event.dataTransfer.dropEffect = 'move';
 	}
 
-	function handleDrop(event) {
+	async function handleDrop(event) {
 		event.preventDefault();
 		const rect = mainArea.getBoundingClientRect();
 		const rawX = event.clientX - rect.left - dragOffset.x;
@@ -44,31 +50,52 @@
 		const y = Math.max(0, Math.min(rawY / 2, rect.height - 40));
 
 		if (draggedItem) {
-			const newItem = { ...draggedItem, x, y };
+			const newItem = { ...draggedItem, id: Date.now(), x, y };
 			addDragElement(newItem);
 			draggedItem = null;
 		}
 	}
 
 	async function handleNeoDrag(event, id) {
+		if (isCombining) return;
 		const { x, y } = event.detail;
 		updateDragElement(id, { x, y });
-		await checkCombinations(id);
+		const movedItem = $dragElements.find((item) => item.id === id);
+		await checkCombinations(movedItem);
 	}
 
-	async function checkCombinations(movedItemId) {
-		const movedItem = $dragElements.find((item) => item.id === movedItemId);
+	async function checkCombinations(movedItem) {
+		if (isCombining) return;
+		isCombining = true;
+
 		for (let item of $dragElements) {
-			if (item.id !== movedItemId && isOverlapping(movedItem, item)) {
-				const newElement = await generateCombination(movedItem.content, item.content);
+			if (item.id !== movedItem.id && isOverlapping(movedItem, item)) {
+				const [element1, element2] = [movedItem.content, item.content].sort();
+				const combinationKey = `${element1},${element2}`;
+
+				let newElement;
+				if ($combinations[combinationKey]) {
+					newElement = $combinations[combinationKey];
+				} else {
+					newElement = await generateCombination(element1, element2);
+				}
+
 				if (newElement) {
 					removeDragElement(movedItem.id);
 					removeDragElement(item.id);
-					addDragElement({ content: newElement, x: movedItem.x, y: movedItem.y });
+					const newId = Date.now();
+					addDragElement({
+						id: newId,
+						content: newElement,
+						x: (movedItem.x + item.x) / 2,
+						y: (movedItem.y + item.y) / 2
+					});
 					break;
 				}
 			}
 		}
+
+		isCombining = false;
 	}
 
 	function isOverlapping(item1, item2) {
@@ -82,7 +109,8 @@
 		isGenerating = false;
 	}
 
-	function stopRandomGeneration() {
+	function stopRandomGenerationHandler() {
+		stopRandomGeneration();
 		isGenerating = false;
 	}
 
@@ -126,7 +154,7 @@
 				Start Random Generation
 			</button>
 			<button
-				on:click={stopRandomGeneration}
+				on:click={stopRandomGenerationHandler}
 				disabled={!isGenerating}
 				class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded disabled:opacity-50"
 			>
