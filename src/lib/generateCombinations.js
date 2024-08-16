@@ -24,34 +24,32 @@ export async function generateCombination(element1, element2) {
     console.log(`🚀 ~ generateCombination ~ response:`, response)
     if (response.ok) {
       const data = await response.json();
-      console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data.combinations);
+      console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data);
 
-      if (!data || !data.combinations || data.combinations.length === 0) {
-        throw new Error('No combination received from server');
+      const { content: newElementName, reason, parents } = data.newElement;
+
+      if (typeof newElementName !== 'string' || newElementName.length === 0) {
+        throw new Error('Invalid newElementName received from server');
       }
-
-      // Assuming the server returns an array of combinations, we'll use the first one
-      const combination = data.combinations[0].combination;
-
-      if (typeof combination !== 'string' || combination.length === 0) {
-        throw new Error('Invalid combination received from server');
-      }
-
-      const capitalCombination = combination.charAt(0).toUpperCase() + combination.slice(1).trim();
-      console.log(`🚀 ~ generateCombination ~ capitalCombination:`, capitalCombination);
 
       // Update stores
-      combinations.update(c => ({ ...c, [key]: capitalCombination }));
+      combinations.update(c => ({ ...c, [key]: newElementName }));
       elements.update(e => {
-        if (!e.some(el => el.content === capitalCombination)) {
-          return [...e, { id: Date.now(), content: capitalCombination, parents: [element1, element2] }];
+        if (!e.some(el => el.content === newElementName)) {
+          return [...e, {
+            id: Date.now(),
+            content: newElementName,
+            parents: parents || [element1, element2],
+            reason: reason || null
+          }];
         }
         return e;
       });
 
-      console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${capitalCombination}`);
-      updateLastCombination(element1, element2, capitalCombination);
-      return capitalCombination;
+      console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${newElementName}`);
+      console.log(`Reason: ${reason || 'No reason provided'}`);
+      updateLastCombination(element1, element2, newElementName);
+      return newElementName;
     } else {
       throw new Error(`Server responded with status: ${response.status}`);
     }

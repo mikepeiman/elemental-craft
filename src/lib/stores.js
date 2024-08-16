@@ -105,3 +105,23 @@ export function stopGeneration() {
 export function resetGeneration() {
     generationStore.set({ isGenerating: false, shouldStop: false });
 }
+
+export const serverResponses = createPersistentStore('serverResponses', {});
+
+// Add these helper functions for the serverResponses store
+export function addServerResponse(modelName, response) {
+    console.log(`🚀 ~ addServerResponse ~ response:`, response)
+    console.log(`🚀 ~ addServerResponse ~ modelName:`, modelName)
+    serverResponses.update(store => {
+        console.log(`🚀 ~ addServerResponse ~ store:`, store)
+        if (!store[modelName]) {
+            store[modelName] = [];
+        }
+        store[modelName].push(response);
+        return store;
+    });
+}
+
+export function resetServerResponses() {
+    serverResponses.reset();
+}
