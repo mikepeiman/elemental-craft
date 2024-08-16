@@ -111,11 +111,10 @@ export async function generateRandomCombinations(count) {
       updateLastCombination(smallerEl, largerEl, existingCombination);
     } else {
       const response = await generateCombination(smallerEl, largerEl);
-      const data = await response.json();
-      let returnObject = {
-        data: data,
-        newElementName: newElementName
-      }
+
+      const { newElementName } = response || {};
+      const { data } = response || {};
+
       if (newElementName) {
         generatedCombinations++;
         console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newElementName}`);
