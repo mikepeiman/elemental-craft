@@ -20,21 +20,25 @@ export async function generateCombination(element1, element2) {
       body: JSON.stringify({ element1, element2 })
     });
 
+    console.log(`🚀 ~ generateCombination ~ response:`, response)
     if (response.ok) {
       const { combination } = await response.json();
 
+      const capitalCombination = combination.charAt(0)?.toUpperCase() + combination.slice(1).trim();
+      console.log(`🚀 ~ generateCombination ~ combination:`, capitalCombination)
+
       // Update stores
-      combinations.update(c => ({ ...c, [key]: combination }));
+      combinations.update(c => ({ ...c, [key]: capitalCombination }));
       elements.update(e => {
-        if (!e.some(el => el.content === combination)) {
-          return [...e, { id: Date.now(), content: combination, parents: [element1, element2] }];
+        if (!e.some(el => el.content === capitalCombination)) {
+          return [...e, { id: Date.now(), content: capitalCombination, parents: [element1, element2] }];
         }
         return e;
       });
 
-      console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${combination}`);
-      updateLastCombination(element1, element2, combination);
-      return combination;
+      console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${capitalCombination}`);
+      updateLastCombination(element1, element2, capitalCombination);
+      return capitalCombination;
     }
   } catch (error) {
     console.error('Error generating combination:', error);

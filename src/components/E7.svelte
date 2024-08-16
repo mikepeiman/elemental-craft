@@ -155,7 +155,7 @@
 					$dragElements.find((el) => el.id === id),
 					$dragElements.find((el) => el.id === parseInt(element.dataset.id))
 				];
-				console.log('🚀 ~ checkOverlap ~ Overlap found:', overlappingPair);
+				// console.log('🚀 ~ checkOverlap ~ Overlap found:', overlappingPair);
 				return;
 			}
 		}
@@ -169,7 +169,7 @@
 			rect1.bottom < rect2.top ||
 			rect1.top > rect2.bottom
 		);
-		console.log('🚀 ~ isOverlapping ~ result:', result);
+		// console.log('🚀 ~ isOverlapping ~ result:', result);
 		return result;
 	}
 
@@ -185,10 +185,18 @@
 		console.log('🚀 ~ onMount ~ Component mounted');
 	});
 
-	// $: {
-	// 	console.log('🚀 ~ Current dragElements:', $dragElements);
-	// 	console.log('🚀 ~ Current overlappingPair:', overlappingPair);
-	// }
+	function handleDoubleClick(event, id) {
+		console.log('🚀 ~ handleDoubleClick ~ id:', id);
+		event.preventDefault();
+		const element = $elements.find((el) => el.id === id);
+		if (element) {
+			const newElement = { ...element };
+			newElement.id = Date.now();
+			newElement.x = 10;
+			newElement.y = 10;
+			addDragElement(newElement);
+		}
+	}
 </script>
 
 <!-- Rest of your component remains the same -->
@@ -202,6 +210,7 @@
 			{#each $elements as item (item.id)}
 				<div
 					draggable="true"
+					on:dblclick={(e) => handleDoubleClick(e, item.id)}
 					on:dragstart={(e) => handleDragStart(e, item)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
