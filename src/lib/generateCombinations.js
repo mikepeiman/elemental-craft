@@ -110,12 +110,17 @@ export async function generateRandomCombinations(count) {
       console.log(`Combination already exists: ${smallerEl} + ${largerEl} = ${existingCombination}`);
       updateLastCombination(smallerEl, largerEl, existingCombination);
     } else {
-      const newCombination = await generateCombination(smallerEl, largerEl);
-      if (newCombination) {
+      const response = await generateCombination(smallerEl, largerEl);
+      const data = await response.json();
+      let returnObject = {
+        data: data,
+        newElementName: newElementName
+      }
+      if (newElementName) {
         generatedCombinations++;
-        console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newCombination}`);
-        combinations.update(c => ({ ...c, [key]: newCombination }));
-        updateLastCombination(smallerEl, largerEl, newCombination);
+        console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newElementName}`);
+        combinations.update(c => ({ ...c, [key]: newElementName }));
+        updateLastCombination(smallerEl, largerEl, newElementName);
       }
     }
 

@@ -10,13 +10,13 @@
 
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 
-<div class="container h-screen mx-auto flex justify-center items-center flex-col">
-	<div class="space-y-5">
+<div id="app-main" class="container h-screen mx-auto grid justify-center items-center flex-col">
+	<div class=" flex items-center justify-center">
 		<h1 class="h1">Elemental Craft</h1>
 		<!-- <p>Start by exploring themes:</p>
 		<ThemeSelector /> -->
 	</div>
-	<div class="flex flex-col">
+	<div class="flex flex-col h-full">
 		<!-- <ElementalBasic /> -->
 		<!-- <ElementalNeodrag /> -->
 		<!-- <E6 /> -->
@@ -26,3 +26,10 @@
 		<!-- <ElementsMain /> -->
 	</div>
 </div>
+
+<style>
+	#app-main {
+		display: grid;
+		grid-template-rows: 8rem 1fr;
+	}
+</style>

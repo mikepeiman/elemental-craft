@@ -258,7 +258,7 @@
 <!-- Rest of your component remains the same -->
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="flex h-screen w-screen bg-gray-900 text-gray-200">
+<div class="flex h-full w-screen bg-gray-900 text-gray-200">
 	<!-- Left Sidebar -->
 	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
 		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
@@ -278,9 +278,9 @@
 	</div>
 
 	<!-- Central Graph View -->
-	<div class="w-3/4 p-4">
-		<div class="flex">
-			<div class="flex flex-col">
+	<div id="main-panel" class="w-3/4 p-4">
+		<div class="flex justify-between items-around">
+			<div class="flex flex-col px-6">
 				<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
 				<div class="mb-4">
 					Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
@@ -288,6 +288,22 @@
 			</div>
 			<div class="flex">
 				<div class="flex items-center space-x-4">
+					<div class="flex flex-col">
+						<button
+							on:click={generateRandomCombinations(randomCombinationCount)}
+							disabled={isGenerating}
+							class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
+						>
+							Start Random Generation
+						</button>
+						<button
+							on:click={stopRandomGeneration}
+							disabled={!isGenerating}
+							class="bg-red-500/50 hover:bg-red-500/25 px-4 py-2 rounded disabled:opacity-50"
+						>
+							Stop Generation
+						</button>
+					</div>
 					<input
 						type="number"
 						bind:value={randomCombinationCount}
@@ -295,27 +311,13 @@
 						max="100"
 						class="bg-gray-700 text-white px-2 py-1 rounded"
 					/>
-					<button
-						on:click={generateRandomCombinations(randomCombinationCount)}
-						disabled={isGenerating}
-						class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
-					>
-						Start Random Generation
-					</button>
-					<button
-						on:click={stopRandomGeneration}
-						disabled={!isGenerating}
-						class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded disabled:opacity-50"
-					>
-						Stop Generation
-					</button>
 				</div>
 			</div>
 		</div>
 		<div
 			id="main-area"
 			bind:this={mainArea}
-			class="bg-gray-800 relative rounded-lg h-[calc(100%-4rem)] w-full"
+			class="bg-gray-800 relative rounded-lg h-auto w-full"
 			on:dragover={handleDragOver}
 			on:drop={handleDrop}
 		>
@@ -360,5 +362,11 @@
 	.draggable-element {
 		touch-action: none;
 		user-select: none;
+	}
+
+	.main-panel {
+		display: grid;
+		grid-template-rows: 8rem 1fr;
+		height: 100%;
 	}
 </style>
