@@ -77,12 +77,26 @@ const culturalContexts = [
     "telepathic network", "sign language world", "musical language society", "emoji-only communication", "pheromone messaging", "quantum entanglement chatters", "symbolic logic speakers", "onomatopoeic realm", "synesthetic communicators", "thought-form projectors"
 ];
 
-async function generateCompletion(prompt, max_tokens = 30) {
+const modelNames =
+    [
+        "meta-llama/llama-3.1-405b",
+        "perplexity/llama-3.1-sonar-large-128k-online",
+        "perplexity/llama-3.1-sonar-small-128k-online",
+        "aetherwiing/mn-starcannon-12b",
+        "nvidia/nemotron-4-340b-instruct",
+        "liuhaotian/llava-yi-34b",
+        "01-ai/yi-34b-200k",
+        "neversleep/noromaid-mixtral-8x7b-instruct",
+        "gryphe/mythomax-l2-13b",
+        "austism/chronos-hermes-13b",
+        "togethercomputer/stripedhyena-hessian-7b"
+    ]
+
+
+async function generateCompletion(prompt, modelName = "gpt-3.5-turbo", max_tokens = 30) {
     const completion = await openai.chat.completions.create({
-        model: "meta-llama/llama-3.1-405b",
-        // meta-llama/llama-3.1-405b
-        // 
-        // aetherwiing/mn-starcannon-12b
+        model: modelName,
+
         messages: [
             { role: "system", content: "You are a creative assistant that combines items in unique ways." },
             { role: "user", content: prompt }
@@ -92,19 +106,23 @@ async function generateCompletion(prompt, max_tokens = 30) {
     });
     return completion.choices[0].message.content.trim();
 }
-
+let selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)]
 export async function POST({ request }) {
     const { element1, element2 } = await request.json();
 
     try {
         // Step 1: Initial Combination
         const initialPrompt = `Combine "${element1}" and "${element2}" into a single concept. It should be as semantically logical a result as possible, using metaphoric reasoning. Provide only the resulting combination as a single word. Single word typically, or at most 2-3 words short phrase. Aim for 1-2 words. No punctuation, capitalize first letters (capital case).`;
-        const initialCombination = await generateCompletion(initialPrompt);
+        selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        const initialCombination = await generateCompletion(initialPrompt, selectedModel);
+        console.log(`🚀 ~ POST ~ initialPrompt, selectedModel:`, initialPrompt, selectedModel)
         console.log(`🚀 ~ POST ~ initialCombination:`, initialCombination)
 
         const selectedContext = culturalContexts[Math.floor(Math.random() * culturalContexts.length)];
         const contextPrompt = `Reimagine "${initialCombination}" in the context of ${selectedContext}. Provide a short, evocative phrase describing this reimagined concept.`;
-        const contextualizedCombination = await generateCompletion(contextPrompt);
+        selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        const contextualizedCombination = await generateCompletion(contextPrompt, selectedModel);
+        console.log(`🚀 ~ POST ~ contextPrompt, selectedModel:`, contextPrompt, selectedModel)
         console.log(`🚀 ~ POST ~ contextPrompt:`, contextPrompt)
         console.log(`🚀 ~ POST ~ contextualizedCombination:`, contextualizedCombination)
 
@@ -112,17 +130,23 @@ export async function POST({ request }) {
         const transformationTypes = ["character", "object", "place", "concept", "event"];
         const selectedType = transformationTypes[Math.floor(Math.random() * transformationTypes.length)];
         const transformPrompt = `Transform "${contextualizedCombination}" into a specific ${selectedType}. Give it a name or title that's catchy and memorable.`;
-        const transformedCombination = await generateCompletion(transformPrompt);
+        selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        const transformedCombination = await generateCompletion(transformPrompt, selectedModel);
+        console.log(`🚀 ~ POST ~ transformPrompt, selectedModel:`, transformPrompt, selectedModel)
         console.log(`🚀 ~ POST ~ transformedCombination:`, transformedCombination)
 
         // Step 4: Pop Culture Injection
         const popCulturePrompt = `Relate "${transformedCombination}" to a well-known pop culture reference, meme, or internet trend. Create a clever mashup or reference. Add a layer of wordplay, pun, or clever linguistic twist to it.`;
-        const popCultureCombination = await generateCompletion(popCulturePrompt);
+        selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        const popCultureCombination = await generateCompletion(popCulturePrompt, selectedModel);
+        console.log(`🚀 ~ POST ~ popCulturePrompt, selectedModel:`, popCulturePrompt, selectedModel)
         console.log(`🚀 ~ POST ~ popCultureCombination:`, popCultureCombination)
 
         // Step 5: Wordplay Pass
         const wordplayPrompt = `Now reduce "${popCultureCombination}" to a single word (preferably) or at most a two- to three-word phrase. Return ONLY the word(s) and no punctuation. It MUST be only onel, two or three words at most.`;
-        const combination = await generateCompletion(wordplayPrompt);
+        selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        const combination = await generateCompletion(wordplayPrompt, selectedModel);
+        console.log(`🚀 ~ POST ~ wordplayPrompt, selectedModel:`, wordplayPrompt, selectedModel)
         console.log(`🚀 ~ POST ~ combination:`, combination)
 
         return json({

@@ -180,20 +180,24 @@
 	}
 
 	onMount(() => {
-		mainArea = document.getElementById('main-area');
+		// mainArea = document.getElementById('main-area');
 		initializeNextId($dragElements);
 		console.log('🚀 ~ onMount ~ Component mounted');
 	});
 
-	function handleDoubleClick(event, id) {
+	function handleClick(event, id) {
 		console.log('🚀 ~ handleDoubleClick ~ id:', id);
 		event.preventDefault();
+		let bounds = mainArea.getBoundingClientRect();
+		let randomX = Math.floor(Math.random() * (bounds.width - 100)) + 50;
+		let randomY = Math.floor(Math.random() * (bounds.height - 100)) + 50;
+
 		const element = $elements.find((el) => el.id === id);
 		if (element) {
 			const newElement = { ...element };
 			newElement.id = Date.now();
-			newElement.x = 10;
-			newElement.y = 10;
+			newElement.x = randomX;
+			newElement.y = randomY;
 			addDragElement(newElement);
 		}
 	}
@@ -210,7 +214,7 @@
 			{#each $elements as item (item.id)}
 				<div
 					draggable="true"
-					on:dblclick={(e) => handleDoubleClick(e, item.id)}
+					on:click={(e) => handleClick(e, item.id)}
 					on:dragstart={(e) => handleDragStart(e, item)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
@@ -257,6 +261,7 @@
 		</div>
 		<div
 			id="main-area"
+			bind:this={mainArea}
 			class="bg-gray-800 relative rounded-lg h-[calc(100%-4rem)] w-full"
 			on:dragover={handleDragOver}
 			on:drop={handleDrop}
