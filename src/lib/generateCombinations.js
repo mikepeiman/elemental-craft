@@ -1,7 +1,7 @@
 // $lib/generateCombinations.js
 
 import { get } from 'svelte/store';
-import { elements, combinations, updateLastCombination } from './stores.js';
+import { elements, combinations, updateLastCombination, addServerResponse } from './stores.js';
 
 
 export async function generateCombination(element1, element2) {
@@ -23,7 +23,13 @@ export async function generateCombination(element1, element2) {
 
     console.log(`🚀 ~ generateCombination ~ response:`, response)
     if (response.ok) {
+
       const data = await response.json();
+      // addServerResponse(selectedModel, {
+      //   type: 'success',
+      //   response: data,
+      //   timestamp: new Date().toISOString()
+      // });
       console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data);
 
       const { content: newElementName, reason, parents } = data.newElement;
@@ -48,9 +54,20 @@ export async function generateCombination(element1, element2) {
 
       console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${newElementName}`);
       console.log(`Reason: ${reason || 'No reason provided'}`);
+
+      let returnObject = {
+        data: data,
+        newElementName: newElementName
+      }
+      console.log(`🚀 ~ generateCombination ~ returnObject:`, returnObject)
       updateLastCombination(element1, element2, newElementName);
-      return newElementName;
+      return returnObject
     } else {
+      // addServerResponse(selectedModel, {
+      //   type: response.status,
+      //   error: response || 'Unknown error',
+      //   timestamp: new Date().toISOString()
+      // });
       throw new Error(`Server responded with status: ${response.status}`);
     }
   } catch (error) {

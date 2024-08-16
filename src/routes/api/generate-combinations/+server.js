@@ -86,8 +86,7 @@ const defaultParams = {
 };
 
 async function generateCompletion(prompt, modelName, params = defaultParams) {
-    let selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
-    console.log(`🚀 ~ generateCompletion ~ selectedModel:`, selectedModel)
+
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -108,21 +107,13 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            addServerResponse(selectedModel, {
-                type: response.status,
-                error: errorText || 'Unknown error',
-                timestamp: new Date().toISOString()
-            });
+
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const data = await response.json();
         console.log(`🚀 ~ generateCompletion ~ data:`, data); // Log the entire response
-        addServerResponse(selectedModel, {
-            type: 'success',
-            response: data,
-            timestamp: new Date().toISOString()
-        });
+
 
         if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
             throw new Error('Unexpected API response structure');
@@ -184,13 +175,13 @@ export async function POST({ request }) {
             try {
                 const result = await generateCompletion(prompt, selectedModel);
                 if (result !== null) {
-                    results.push({ model: selectedModel, combination: result });
-
+                    results.push({ model: selectedModel, combination: result, success: true, error: null });
                     console.log(`🚀 ~ POST ${selectedModel} ~ result:`, result);
                 } else {
                     throw new Error('Null result returned from generateCompletion');
                 }
             } catch (error) {
+                results.push({ model: selectedModel, combination: null, success: false, error: error.message });
                 console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
             }
         }
@@ -269,6 +260,7 @@ export async function POST({ request }) {
 
         // Return a proper Response object
         return json({
+            allResults: results,
             combinations: results,
             bestCombination: bestCombination,
             newElement: newElement
@@ -276,6 +268,6 @@ export async function POST({ request }) {
     } catch (error) {
         console.error('Error in POST handler:', error);
         // Return a proper Response object even in case of an error
-        return json({ error: 'Failed to generate combinations', details: error.message }, { status: 500 });
+        return json({ allResults: results, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
     }
 }

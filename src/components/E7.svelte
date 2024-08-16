@@ -11,7 +11,8 @@
 		removeDragElement,
 		initializeNextId,
 		updateLastCombination,
-		deleteElement
+		deleteElement,
+		addServerResponse
 	} from '$lib/stores.js';
 	import {
 		generateCombination,
@@ -27,10 +28,10 @@
 	let randomCombinationCount = 10;
 	let isGenerating = false;
 	import { serverResponses } from '$lib/stores.js';
+	serverResponses.subscribe((value) => {
+		console.log('Current server responses:', value);
+	});
 
-	$: {
-		console.log('Current server responses:', $serverResponses);
-	}
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
 		draggedElement = element;
@@ -98,6 +99,11 @@
 		overlappingPair = null;
 	}
 
+	/**
+	 * @type {any}
+	 */
+	let responseData;
+
 	async function combineElements(element1, element2, x, y) {
 		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
 		if (!element1 || !element2) {
@@ -116,7 +122,19 @@
 			console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
 		} else {
 			console.log('🚀 ~ combineElements ~ Generating new combination');
-			newElement = await generateCombination(smallerEl, largerEl);
+			let generationResults = await generateCombination(smallerEl, largerEl);
+
+			let responseData = generationResults['data'];
+			if (responseData) {
+				responseData.allResults.forEach((result) => {
+					addServerResponse(result.model, {
+						...result
+					});
+				});
+			}
+			newElement = generationResults['newElementName'];
+			console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
+			console.log(`🚀 ~ combineElements ~ responseData:`, responseData);
 			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
 			if (newElement) {
 				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
