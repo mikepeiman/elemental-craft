@@ -3,6 +3,7 @@
 import { get } from 'svelte/store';
 import { elements, combinations, updateLastCombination } from './stores.js';
 
+
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
   const existingCombination = get(combinations)[key];
@@ -22,10 +23,22 @@ export async function generateCombination(element1, element2) {
 
     console.log(`🚀 ~ generateCombination ~ response:`, response)
     if (response.ok) {
-      const { combination } = await response.json();
+      const data = await response.json();
+      console.log(`🚀 ~ generateCombination ~ data:`, data);
 
-      const capitalCombination = combination.charAt(0)?.toUpperCase() + combination.slice(1).trim();
-      console.log(`🚀 ~ generateCombination ~ combination:`, capitalCombination)
+      if (!data || !data.combinations || data.combinations.length === 0) {
+        throw new Error('No combination received from server');
+      }
+
+      // Assuming the server returns an array of combinations, we'll use the first one
+      const combination = data.combinations[0].combination;
+
+      if (typeof combination !== 'string' || combination.length === 0) {
+        throw new Error('Invalid combination received from server');
+      }
+
+      const capitalCombination = combination.charAt(0).toUpperCase() + combination.slice(1).trim();
+      console.log(`🚀 ~ generateCombination ~ capitalCombination:`, capitalCombination);
 
       // Update stores
       combinations.update(c => ({ ...c, [key]: capitalCombination }));
@@ -39,12 +52,13 @@ export async function generateCombination(element1, element2) {
       console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${capitalCombination}`);
       updateLastCombination(element1, element2, capitalCombination);
       return capitalCombination;
+    } else {
+      throw new Error(`Server responded with status: ${response.status}`);
     }
   } catch (error) {
     console.error('Error generating combination:', error);
+    return null;
   }
-
-  return null;
 }
 
 let shouldStopGeneration = false;
