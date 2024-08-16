@@ -10,7 +10,8 @@
 		updateDragElement,
 		removeDragElement,
 		initializeNextId,
-		updateLastCombination
+		updateLastCombination,
+		deleteElement
 	} from '$lib/stores.js';
 	import {
 		generateCombination,
@@ -173,12 +174,6 @@
 		return result;
 	}
 
-	function handleContextMenu(event, id) {
-		console.log('🚀 ~ handleContextMenu ~ id:', id);
-		event.preventDefault();
-		removeDragElement(id);
-	}
-
 	onMount(() => {
 		// mainArea = document.getElementById('main-area');
 		initializeNextId($dragElements);
@@ -201,6 +196,40 @@
 			addDragElement(newElement);
 		}
 	}
+	let contextMenu = {
+		show: false,
+		x: 0,
+		y: 0,
+		elementId: ''
+	};
+	function showContextMenu(event, id) {
+		event.preventDefault();
+		contextMenu = {
+			show: true,
+			x: event.clientX,
+			y: event.clientY,
+			elementId: id
+		};
+	}
+
+	function hideContextMenu() {
+		contextMenu = { show: false, x: 0, y: 0, elementId: null };
+	}
+
+	function handleDelete() {
+		if (contextMenu.elementId) {
+			deleteElement(contextMenu.elementId);
+			hideContextMenu();
+		}
+	}
+
+	// Update the existing handleContextMenu function
+	function removeFromCombinationArea(event, id) {
+		console.log('🚀 ~ handleContextMenu ~ id:', id);
+		event.preventDefault();
+		// showContextMenu(event, id);
+		removeDragElement(id);
+	}
 </script>
 
 <!-- Rest of your component remains the same -->
@@ -216,6 +245,7 @@
 					draggable="true"
 					on:click={(e) => handleClick(e, item.id)}
 					on:dragstart={(e) => handleDragStart(e, item)}
+					on:contextmenu={(e) => showContextMenu(e, item.id)}
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-move"
 				>
 					{item.content}
@@ -275,7 +305,7 @@
 					}}
 					on:neodrag={(e) => handleNeoDrag(e, item.id)}
 					on:neodrag:end={(e) => handleNeoDragEnd(e, item.id)}
-					on:contextmenu={(e) => handleContextMenu(e, item.id)}
+					on:contextmenu={(e) => removeFromCombinationArea(e, item.id)}
 					data-id={item.id}
 					class="draggable-element absolute px-4 py-2 rounded-md cursor-move
                         {overlappingPair && overlappingPair.some((el) => el.id === item.id)
@@ -288,6 +318,19 @@
 			{/each}
 		</div>
 	</div>
+	{#if contextMenu.show}
+		<div
+			class="absolute z-50 bg-gray-800 border border-gray-700 rounded shadow-lg"
+			style="top: {contextMenu.y}px; left: {contextMenu.x}px;"
+		>
+			<button
+				class="block w-full text-left px-4 py-2 hover:bg-gray-700 transition-colors"
+				on:click|stopPropagation={handleDelete}
+			>
+				Delete
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>

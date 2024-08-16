@@ -71,11 +71,26 @@ export async function POST({ request }) {
     try {
         const { element1, element2 } = await request.json();
 
-        const prompt = `Combine "${element1}" and "${element2}" into a single, semantically logical concept using metaphoric, symbolic, intuitive, and visual reasoning. The result should be a noun that represents a creative fusion of the two elements. Consider various contexts, cultural references, and potential transformations of the concept. The final result should be engaging and suitable for use in a game-like context.
+        const prompt = `Combine "${element1}" and "${element2}" into a single, concise noun.
 
-        Provide the resulting combination as ONLY one single word, or at most two or three words - *NO LONGER THAN THREE WORDS*. Prefer ONE WORD or TWO WORD results. Aim for conciseness while ensuring the result is a noun. Capitalize the first letter of each word (Title Case) and do not include any punctuation.
-
-        Remember, the result must be a noun and should maintain a logical connection to both original elements. The result must be 1-3 words, capital case, no punctuation.`
+        STRICT RULES:
+        1. Respond with ONLY 1 to 3 words. No exceptions.
+        2. Prefer single-word or two-word responses.
+        3. Use Title Case (capitalize first letter of each word).
+        4. Do not use any punctuation.
+        5. The result must be a noun.
+        6. Ensure a logical connection to both original elements.
+        
+        Your entire response should be just the new noun combination, nothing else.
+        
+        Examples of good responses:
+        - Water + Fire: Steam
+        - Earth + Wind: Dust
+        - Time + Sand: Hourglass
+        - Fire + Tree: Ash
+        - Ocean + Mountain: Seamount
+        
+        REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
         let results = [];
         for (let i = 0; i < 5; i++) {
             const selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];

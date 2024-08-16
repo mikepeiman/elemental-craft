@@ -76,6 +76,12 @@ export function removeDragElement(id) {
     dragElements.update(els => els.filter(el => el.id !== id));
 }
 
+export function deleteElement(id) {
+    elements.update(els => els.filter(el => el.id !== id));
+    dragElements.update(els => els.filter(el => el.id !== id));
+}
+
+
 export function initializeNextId(elements) {
     nextId = Math.max(...elements.map(el => el.id), 0) + 1;
 }
