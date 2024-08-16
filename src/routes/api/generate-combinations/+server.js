@@ -186,7 +186,7 @@ export async function POST({ request }) {
             }
         }
 
-        console.log(`🚀 ~ generateCombinations ~ results:`, results);
+        // console.log(`🚀 ~ generateCombinations ~ results:`, results);
 
         // Final evaluation prompt
         const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:

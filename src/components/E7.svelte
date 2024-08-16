@@ -12,7 +12,8 @@
 		initializeNextId,
 		updateLastCombination,
 		deleteElement,
-		addServerResponse
+		addServerResponse,
+		serverResponses
 	} from '$lib/stores.js';
 	import {
 		generateCombination,
@@ -20,17 +21,15 @@
 		stopRandomGeneration
 	} from '$lib/generateCombinations.js';
 
+	$: console.log(`🚀 ~ $serverResponses:`, $serverResponses);
+
 	let mainArea;
 	let draggedElement = null;
 	let overlappingPair = null;
 	let dragOffset = { x: 0, y: 0 };
 	let combiningElements = null;
-	let randomCombinationCount = 10;
+	let randomCombinationCount = 1;
 	let isGenerating = false;
-	import { serverResponses } from '$lib/stores.js';
-	serverResponses.subscribe((value) => {
-		console.log('Current server responses:', value);
-	});
 
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
@@ -121,21 +120,17 @@
 			newElement = $combinations[combinationKey];
 			console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
 		} else {
-			console.log('🚀 ~ combineElements ~ Generating new combination');
 			let generationResults = await generateCombination(smallerEl, largerEl);
+			console.log('🚀 ~ combineElements ~ Generating new combination');
+			console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
+			newElement = generationResults['newElementName'];
+			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
 
 			let responseData = generationResults['data'];
-			if (responseData) {
-				responseData.allResults.forEach((result) => {
-					addServerResponse(result.model, {
-						...result
-					});
-				});
-			}
-			newElement = generationResults['newElementName'];
-			console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
 			console.log(`🚀 ~ combineElements ~ responseData:`, responseData);
-			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
+			if (responseData) {
+				handleResponseApiLogs(responseData);
+			}
 			if (newElement) {
 				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
 			}
@@ -155,6 +150,18 @@
 			updateLastCombination(smallerEl, largerEl, newElement);
 		} else {
 			console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
+		}
+	}
+
+	function handleResponseApiLogs(responseData) {
+		if (responseData && responseData.allResults) {
+			responseData.allResults.forEach((result) => {
+				addServerResponse(
+					result.model,
+					result.success, // Pass true if success, false or null if error
+					result.combination // The actual result
+				);
+			});
 		}
 	}
 
@@ -278,7 +285,7 @@
 	</div>
 
 	<!-- Central Graph View -->
-	<div id="main-panel" class="w-3/4 p-4">
+	<div id="main-panel" class="w-3/4 p-4 h-full relative">
 		<div class="flex justify-between items-around">
 			<div class="flex flex-col px-6">
 				<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
@@ -317,14 +324,14 @@
 		<div
 			id="main-area"
 			bind:this={mainArea}
-			class="bg-gray-800 relative rounded-lg h-auto w-full"
+			class="bg-gray-800 relative rounded-lg h-full w-full"
 			on:dragover={handleDragOver}
 			on:drop={handleDrop}
 		>
 			{#each $dragElements as item (item.id)}
 				<div
 					use:draggable={{
-						bounds: 'parent',
+						bounds: mainArea,
 						axis: 'both',
 						defaultPosition: { x: item.x, y: item.y }
 					}}
@@ -364,7 +371,7 @@
 		user-select: none;
 	}
 
-	.main-panel {
+	#main-panel {
 		display: grid;
 		grid-template-rows: 8rem 1fr;
 		height: 100%;

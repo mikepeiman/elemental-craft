@@ -109,15 +109,26 @@ export function resetGeneration() {
 export const serverResponses = createPersistentStore('serverResponses', {});
 
 // Add these helper functions for the serverResponses store
-export function addServerResponse(modelName, response) {
-    console.log(`🚀 ~ addServerResponse ~ response:`, response)
-    console.log(`🚀 ~ addServerResponse ~ modelName:`, modelName)
+export function addServerResponse(modelName, isSuccess, result) {
     serverResponses.update(store => {
         const newStore = { ...store };
         if (!newStore[modelName]) {
-            newStore[modelName] = [];
+            newStore[modelName] = {
+                errorCount: 0,
+                successCount: 0,
+                results: [],
+                timestamps: []
+            };
         }
-        newStore[modelName] = [...newStore[modelName], response];
+
+        newStore[modelName] = {
+            errorCount: isSuccess ? newStore[modelName].errorCount : newStore[modelName].errorCount + 1,
+            successCount: isSuccess ? newStore[modelName].successCount + 1 : newStore[modelName].successCount,
+            results: [...newStore[modelName].results, result],
+            timestamps: [...newStore[modelName].timestamps, Date.now()]
+        };
+
+        console.log('Updated store for model:', modelName, newStore[modelName]);
         return newStore;
     });
 }
