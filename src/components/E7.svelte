@@ -12,13 +12,19 @@
 		initializeNextId,
 		updateLastCombination
 	} from '$lib/stores.js';
-	import { generateCombination } from '$lib/generateCombinations.js';
+	import {
+		generateCombination,
+		generateRandomCombinations,
+		stopRandomGeneration
+	} from '$lib/generateCombinations.js';
 
 	let mainArea;
 	let draggedElement = null;
 	let overlappingPair = null;
 	let dragOffset = { x: 0, y: 0 };
 	let combiningElements = null;
+	let randomCombinationCount = 10;
+	let isGenerating = false;
 
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
@@ -207,9 +213,38 @@
 
 	<!-- Central Graph View -->
 	<div class="w-3/4 p-4">
-		<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
-		<div class="mb-4">
-			Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
+		<div class="flex">
+			<div class="flex flex-col">
+				<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
+				<div class="mb-4">
+					Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
+				</div>
+			</div>
+			<div class="flex">
+				<div class="flex items-center space-x-4">
+					<input
+						type="number"
+						bind:value={randomCombinationCount}
+						min="1"
+						max="100"
+						class="bg-gray-700 text-white px-2 py-1 rounded"
+					/>
+					<button
+						on:click={generateRandomCombinations(randomCombinationCount)}
+						disabled={isGenerating}
+						class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
+					>
+						Start Random Generation
+					</button>
+					<button
+						on:click={stopRandomGeneration}
+						disabled={!isGenerating}
+						class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded disabled:opacity-50"
+					>
+						Stop Generation
+					</button>
+				</div>
+			</div>
 		</div>
 		<div
 			id="main-area"

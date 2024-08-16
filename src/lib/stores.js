@@ -23,9 +23,15 @@ export const elements = createPersistentStore('elements', [
     { id: 1, content: 'Water', parents: [] },
     { id: 2, content: 'Fire', parents: [] },
     { id: 3, content: 'Earth', parents: [] },
-    { id: 4, content: 'Air', parents: [] },
+    { id: 4, content: 'Wind', parents: [] },
     { id: 5, content: 'Spirit', parents: [] }
 ]);
+
+// { id: 6, content: 'Math', parents: [] },
+// { id: 7, content: 'Geometry', parents: [] },
+// { id: 8, content: 'Music', parents: [] },
+// { id: 9, content: 'Cell', parents: [] },
+// { id: 10, content: 'Humor', parents: [] },
 
 export const combinations = createPersistentStore('combinations', {});
 

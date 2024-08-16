@@ -13,6 +13,7 @@ export async function generateCombination(element1, element2) {
   }
 
   try {
+    console.log(`***API CALL*** Generating: ${element1} + ${element2}`);
     const response = await fetch('/api/generate-combinations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -31,7 +32,7 @@ export async function generateCombination(element1, element2) {
         return e;
       });
 
-      console.log(`Generated: ${element1} + ${element2} = ${combination}`);
+      console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${combination}`);
       updateLastCombination(element1, element2, combination);
       return combination;
     }
@@ -45,10 +46,17 @@ export async function generateCombination(element1, element2) {
 let shouldStopGeneration = false;
 
 export async function generateRandomCombinations(count) {
-  shouldStopGeneration = false;
+  let shouldStopGeneration = false;
+  let generatedCombinations = 0;
+  let attempts = 0;
+  const maxAttempts = count * 10; // Adjust this multiplier as needed
 
-  for (let i = 0; i < count; i++) {
+  while (generatedCombinations < count && attempts < maxAttempts) {
+    attempts++;
+    console.log(`🚀 ~ generateRandomCombinations ~ attempt:`, attempts);
+
     if (shouldStopGeneration) {
+      console.log("Generation stopped by user.");
       break;
     }
 
@@ -56,14 +64,37 @@ export async function generateRandomCombinations(count) {
     const element1 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
     const element2 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
 
-    if (element1 !== element2) {
-      await generateCombination(element1, element2);
+    const [smallerEl, largerEl] = [element1, element2].sort();
+    const key = `${smallerEl},${largerEl}`;
+    console.log(`🚀 ~ generateRandomCombinations ~ key:`, key);
+    console.log(`🚀 ~ generateRandomCombinations ~ element1, element2:`, smallerEl, largerEl);
+
+    const currentCombinations = get(combinations);
+    const existingCombination = currentCombinations[key];
+    console.log(`🚀 ~ generateRandomCombinations ~ existingCombination:`, existingCombination);
+
+    if (existingCombination) {
+      console.log(`Combination already exists: ${smallerEl} + ${largerEl} = ${existingCombination}`);
+      updateLastCombination(smallerEl, largerEl, existingCombination);
+    } else {
+      const newCombination = await generateCombination(smallerEl, largerEl);
+      if (newCombination) {
+        generatedCombinations++;
+        console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newCombination}`);
+        combinations.update(c => ({ ...c, [key]: newCombination }));
+        updateLastCombination(smallerEl, largerEl, newCombination);
+      }
     }
 
     // Add a small delay to allow for smoother stopping
     await new Promise(resolve => setTimeout(resolve, 10));
   }
 
+  if (attempts >= maxAttempts) {
+    console.warn(`Reached maximum attempts (${maxAttempts}) before generating ${count} combinations.`);
+  }
+
+  console.log(`Generated ${generatedCombinations} new combinations in ${attempts} attempts.`);
   shouldStopGeneration = false;
 }
 
