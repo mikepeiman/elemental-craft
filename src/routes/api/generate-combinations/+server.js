@@ -31,6 +31,14 @@ const modelNames = [
 
 // let selectedModel = "openai/gpt-3.5-turbo";
 
+const params = {
+    temperature: 0.,
+    top_p: 0.9,
+    frequency_penalty: 1.5,
+    presence_penalty: 1.5,
+    max_tokens: 9
+};
+
 async function generateCompletion(prompt, modelName) {
     let selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
     console.log(`🚀 ~ generateCompletion ~ selectedModel:`, selectedModel)
@@ -49,8 +57,7 @@ async function generateCompletion(prompt, modelName) {
                     { "role": "system", "content": "You are a creative assistant that combines items in semantically logical ways to produce noun combinations." },
                     { "role": "user", "content": prompt }
                 ],
-                "max_tokens": 30,
-                "temperature": 0.8
+                ...params
             })
         });
 
@@ -60,7 +67,9 @@ async function generateCompletion(prompt, modelName) {
         }
 
         const data = await response.json();
-        return data.choices[0].message.content.trim();
+        let msg = data.choices[0].message.content.trim()
+        console.log(`🚀 ~ generateCompletion ~ msg:`, msg)
+        return msg
     } catch (error) {
         console.error('Error in generateCompletion:', error);
         throw error;
@@ -92,13 +101,15 @@ export async function POST({ request }) {
         
         REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
         let results = [];
-        for (let i = 0; i < 5; i++) {
-            const selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+        for (let i = 0; i < extendedModelNames.length; i++) {
+            // const selectedModel = modelNames[Math.floor(Math.random() * modelNames.length)];
+            const selectedModel = extendedModelNames[i];
             const result = await generateCompletion(prompt, selectedModel);
             results.push({ model: selectedModel, combination: result });
+            console.log(`🚀 ~ POST ${selectedModel} ~ result:`, result)
         }
-        console.log(`🚀 ~ POST ~ results:`, results)
 
+        console.log(`🚀 ~ POST ~ results:`, results)
         let finalResults = json({ combinations: results });
         console.log(`🚀  POST ~ finalResults:`, finalResults)
         return finalResults;

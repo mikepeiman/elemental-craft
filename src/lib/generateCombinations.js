@@ -24,7 +24,7 @@ export async function generateCombination(element1, element2) {
     console.log(`🚀 ~ generateCombination ~ response:`, response)
     if (response.ok) {
       const data = await response.json();
-      console.log(`🚀 ~ generateCombination ~ data:`, data);
+      console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data.combinations);
 
       if (!data || !data.combinations || data.combinations.length === 0) {
         throw new Error('No combination received from server');

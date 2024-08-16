@@ -219,6 +219,7 @@
 	function handleDelete() {
 		if (contextMenu.elementId) {
 			deleteElement(contextMenu.elementId);
+			removeDragElement(id);
 			hideContextMenu();
 		}
 	}

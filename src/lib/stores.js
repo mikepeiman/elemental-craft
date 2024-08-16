@@ -79,6 +79,9 @@ export function removeDragElement(id) {
 export function deleteElement(id) {
     elements.update(els => els.filter(el => el.id !== id));
     dragElements.update(els => els.filter(el => el.id !== id));
+    combinations.update(combos => Object.fromEntries(Object.entries(combos).filter(([key]) => !key.includes(id.toString()))));
+
+
 }
 
 
