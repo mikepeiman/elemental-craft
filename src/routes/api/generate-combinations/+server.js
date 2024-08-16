@@ -110,7 +110,6 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
             const errorText = await response.text();
             addServerResponse(selectedModel, {
                 type: response.status,
-                prompt,
                 error: errorText || 'Unknown error',
                 timestamp: new Date().toISOString()
             });
@@ -121,7 +120,6 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         console.log(`🚀 ~ generateCompletion ~ data:`, data); // Log the entire response
         addServerResponse(selectedModel, {
             type: 'success',
-            prompt,
             response: data,
             timestamp: new Date().toISOString()
         });
@@ -194,12 +192,6 @@ export async function POST({ request }) {
                 }
             } catch (error) {
                 console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
-                addServerResponse(selectedModel, {
-                    type: 'error',
-                    prompt,
-                    error: error.message || 'Unknown error',
-                    timestamp: new Date().toISOString()
-                });
             }
         }
 

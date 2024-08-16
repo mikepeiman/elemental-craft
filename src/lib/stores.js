@@ -4,10 +4,14 @@ import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
 function createPersistentStore(key, initialValue) {
-    const storedValue = browser ? localStorage.getItem(key) : null;
-    const store = writable(storedValue ? JSON.parse(storedValue) : initialValue);
+    const store = writable(initialValue);
 
     if (browser) {
+        const storedValue = localStorage.getItem(key);
+        if (storedValue) {
+            store.set(JSON.parse(storedValue));
+        }
+
         store.subscribe(value => {
             localStorage.setItem(key, JSON.stringify(value));
         });
@@ -15,9 +19,15 @@ function createPersistentStore(key, initialValue) {
 
     return {
         ...store,
-        reset: () => store.set(initialValue)
+        reset: () => {
+            store.set(initialValue);
+            if (browser) {
+                localStorage.setItem(key, JSON.stringify(initialValue));
+            }
+        }
     };
 }
+
 
 export const elements = createPersistentStore('elements', [
     { id: 1, content: 'Water', parents: [] },
@@ -113,12 +123,12 @@ export function addServerResponse(modelName, response) {
     console.log(`🚀 ~ addServerResponse ~ response:`, response)
     console.log(`🚀 ~ addServerResponse ~ modelName:`, modelName)
     serverResponses.update(store => {
-        console.log(`🚀 ~ addServerResponse ~ store:`, store)
-        if (!store[modelName]) {
-            store[modelName] = [];
+        const newStore = { ...store };
+        if (!newStore[modelName]) {
+            newStore[modelName] = [];
         }
-        store[modelName].push(response);
-        return store;
+        newStore[modelName] = [...newStore[modelName], response];
+        return newStore;
     });
 }
 

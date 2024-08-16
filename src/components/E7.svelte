@@ -26,7 +26,11 @@
 	let combiningElements = null;
 	let randomCombinationCount = 10;
 	let isGenerating = false;
+	import { serverResponses } from '$lib/stores.js';
 
+	$: {
+		console.log('Current server responses:', $serverResponses);
+	}
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
 		draggedElement = element;
