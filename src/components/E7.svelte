@@ -33,6 +33,12 @@
 	let randomCombinationCount = 1;
 	let isGenerating = false;
 
+	onMount(() => {
+		// mainArea = document.getElementById('main-area');
+		initializeNextId($dragElements);
+		console.log('🚀 ~ onMount ~ Component mounted');
+	});
+
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
 		draggedElement = element;
@@ -170,6 +176,17 @@
 		}
 	}
 
+	function logSeverResponses() {
+		console.log(`🚀 ~ logSeverResponses ~ $serverResponses:`, $serverResponses);
+
+		Object.entries($serverResponses).forEach(([model, properties]) => {
+			console.log(`%cModel: ${model}`, 'color: #0fcfff; font-weight: bold; font-size: 1.5rem;');
+			properties.results.forEach((result) => {
+				console.log(`Result: ${result}`);
+			});
+		});
+	}
+
 	function checkOverlap(id) {
 		// console.log('🚀 ~ checkOverlap ~ id:', id);
 		const currentElement = document.querySelector(`[data-id="${id}"]`);
@@ -207,12 +224,6 @@
 		// console.log('🚀 ~ isOverlapping ~ result:', result);
 		return result;
 	}
-
-	onMount(() => {
-		// mainArea = document.getElementById('main-area');
-		initializeNextId($dragElements);
-		console.log('🚀 ~ onMount ~ Component mounted');
-	});
 
 	function handleClick(event, id) {
 		console.log('🚀 ~ handleDoubleClick ~ id:', id);
@@ -301,11 +312,14 @@
 			<div class="flex">
 				<div class="flex items-center space-x-4">
 					<div class="flex flex-col">
-						<button class="px-4 py-2 rounded bg-cyan-800" on:click={saveServerResponsesToFile}
+						<button class="px-4 py-2 rounded bg-indigo-800" on:click={saveServerResponsesToFile}
 							>Save Server Responses</button
 						>
-						<button class="px-4 py-2 rounded bg-cyan-700" on:click={loadServerResponsesFromFile}
+						<button class="px-4 py-2 rounded bg-indigo-700" on:click={loadServerResponsesFromFile}
 							>Load Server Responses</button
+						>
+						<button class="px-4 py-2 rounded bg-indigo-600" on:click={logSeverResponses}
+							>Log Server Responses</button
 						>
 					</div>
 					<div class="flex flex-col">

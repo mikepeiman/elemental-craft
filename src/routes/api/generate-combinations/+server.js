@@ -13,17 +13,14 @@ const extendedModelNames = [
     "google/palm-2-chat-bison",
     "qwen/qwen-14b-chat",
     "deepseek/deepseek-chat",
-    "intel/neural-chat-7b",
     "meta-llama/llama-2-70b-chat",
     "microsoft/wizardlm-2-8x22b",
     "perplexity/llama-3.1-sonar-small-128k-online",
     "mistralai/mistral-tiny",
     "mistralai/mixtral-8x7b-instruct",
     "aetherwiing/mn-starcannon-12b",
-    "neversleep/noromaid-mixtral-8x7b-instruct",
     "gryphe/mythomax-l2-13b",
     "austism/chronos-hermes-13b",
-    "togethercomputer/stripedhyena-hessian-7b",
     "anthropic/claude-3.5-sonnet:beta",
     "anthropic/claude-3-haiku",
     "openai/chatgpt-4o-latest",
@@ -44,7 +41,12 @@ const errorModels = [
     "liuhaotian/llava-yi-34b",
     "01-ai/yi-34b-200k",
     "nvidia/nemotron-4-340b-instruct",
+    "neversleep/noromaid-mixtral-8x7b-instruct",
+    "intel/neural-chat-7b",
+]
 
+const stupidModels = [
+    "togethercomputer/stripedhyena-hessian-7b",
 ]
 
 const finalModel = "anthropic/claude-3.5-sonnet";
@@ -352,10 +354,12 @@ export async function POST({ request }) {
 
         // console.log(`🚀 ~ generateCombinations ~ results:`, results);
 
+        let finalResults = results.map(r => `${r.combination}`).join('\n')
         // Final evaluation prompt
+        console.log(`🚀 ~ POST ~ finalResults:`, finalResults)
         const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
     
-        ${results.map(r => `${r.combination}`).join('\n')}
+        ${finalResults}
     
         Rules for selection:
         1. The chosen combination must be 1 to 3 words only.
