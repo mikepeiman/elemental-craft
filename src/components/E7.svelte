@@ -15,8 +15,10 @@
 		addServerResponse,
 		serverResponses,
 		saveServerResponsesToFile,
-		loadServerResponsesFromFile
+		loadServerResponsesFromFile,
+		extendedModelNames
 	} from '$lib/stores.js';
+
 	import {
 		generateCombination,
 		generateRandomCombinations,
@@ -137,7 +139,9 @@
 			let responseData = generationResults['data'];
 			console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
 			responseData.allResults.forEach((result) => {
-				console.log(`${result.model}\n --- ${smallerEl} + ${largerEl} = ${result.combination} `);
+				console.log(
+					`%c${result.model}\n --- %c${smallerEl} + ${largerEl} = ${result.combination}, 'font-size: .75rem; color: black;', 'font-size: 1.25rem; color: blue;'`
+				);
 			});
 			if (responseData) {
 				handleResponseApiLogs(smallerEl, largerEl, responseData);
@@ -165,28 +169,46 @@
 	}
 
 	function handleResponseApiLogs(el1, el2, responseData) {
-		if (responseData && responseData.allResults) {
-			responseData.allResults.forEach((result) => {
-				addServerResponse(
-					result.model,
-					result.success, // Pass true if success, false or null if error
-					`${el1} + ${el2}: ${result.combination}`
-				);
-			});
-		}
+		console.log(`🚀 ~ handleResponseApiLogs ~ el1, el2, responseData:`, el1, el2, responseData);
+		// if (responseData && responseData.allResults) {
+		// 	responseData.allResults.forEach((result) => {
+		// 		addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`);
+		// 	});
+		// }
 	}
 
-	function logSeverResponses() {
-		console.log(`🚀 ~ logSeverResponses ~ $serverResponses:`, $serverResponses);
+	function logServerResponses() {
+		console.log(`🚀 ~ logServerResponses ~ extendedModelNames:`, extendedModelNames);
 
-		Object.entries($serverResponses).forEach(([model, properties]) => {
-			console.log(`%cModel: ${model}`, 'color: #0fcfff; font-weight: bold; font-size: 1.5rem;');
-			properties.results.forEach((result) => {
-				console.log(`Result: ${result}`);
-			});
+		extendedModelNames.forEach((modelName) => {
+			if ($serverResponses[modelName]) {
+				console.log(
+					`%cModel: ${modelName}`,
+					'color: #0fcfff; font-weight: bold; font-size: 1.5rem;'
+				);
+
+				const properties = $serverResponses[modelName];
+				console.log(
+					`%cSuccess Count: ${properties.successCount}`,
+					'color: #00ff00; font-weight: bold;'
+				);
+				console.log(
+					`%cError Count: ${properties.errorCount}`,
+					'color: #ff0000; font-weight: bold;'
+				);
+
+				properties.results.forEach((result, index) => {
+					console.log(
+						`%cResult ${index + 1}: %c${result}`,
+						'color: #ffaa00; font-weight: bold;',
+						'color:black; font-weight: normal; font-size: 1.25rem;'
+					);
+				});
+
+				console.log('\n'); // Add a newline for better separation between models
+			}
 		});
 	}
-
 	function checkOverlap(id) {
 		// console.log('🚀 ~ checkOverlap ~ id:', id);
 		const currentElement = document.querySelector(`[data-id="${id}"]`);
@@ -318,7 +340,7 @@
 						<button class="px-4 py-2 rounded bg-indigo-700" on:click={loadServerResponsesFromFile}
 							>Load Server Responses</button
 						>
-						<button class="px-4 py-2 rounded bg-indigo-600" on:click={logSeverResponses}
+						<button class="px-4 py-2 rounded bg-indigo-600" on:click={logServerResponses}
 							>Log Server Responses</button
 						>
 					</div>

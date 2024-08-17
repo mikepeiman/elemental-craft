@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
-import { addServerResponse } from '$lib/stores.js'
+import { addServerResponse, extendedModelNames } from '$lib/stores.js'
 
 dotenv.config();
 
@@ -8,24 +8,7 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const YOUR_SITE_URL = process.env.YOUR_SITE_URL;
 const YOUR_SITE_NAME = process.env.YOUR_SITE_NAME;
 
-const extendedModelNames = [
-    "meta-llama/llama-2-13b-chat",
-    "google/palm-2-chat-bison",
-    "qwen/qwen-14b-chat",
-    "deepseek/deepseek-chat",
-    "meta-llama/llama-2-70b-chat",
-    "microsoft/wizardlm-2-8x22b",
-    "perplexity/llama-3.1-sonar-small-128k-online",
-    "mistralai/mistral-tiny",
-    "mistralai/mixtral-8x7b-instruct",
-    "aetherwiing/mn-starcannon-12b",
-    "gryphe/mythomax-l2-13b",
-    "austism/chronos-hermes-13b",
-    "anthropic/claude-3.5-sonnet:beta",
-    "anthropic/claude-3-haiku",
-    "openai/chatgpt-4o-latest",
-    "openai/gpt-4o-mini-2024-07-18",
-];
+
 
 const effectiveModelNames = [
     "mistralai/mistral-tiny",
@@ -66,7 +49,7 @@ const rules = `
         2. Prefer single-word or two-word responses.
         3. Use Title Case (capitalize first letter of each word).
         4. Do not use any punctuation.
-        5. The result must be a noun.
+        5. The result must be a noun if a single word, but could include an adverb if two or three words
         6. Ensure a logical connection to both original elements.
         7. Avoid portmanteau and novelty coined phrases when possible (opt for things with existing references)`
 
@@ -418,7 +401,7 @@ export async function POST({ request }) {
 
         // Create the new element object
         const newElement = {
-            content: finalResult,
+            content: bestCombination,
             reason: finalReason,
             parents: [element1, element2]
         };

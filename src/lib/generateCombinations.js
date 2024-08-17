@@ -3,7 +3,14 @@
 import { get } from 'svelte/store';
 import { elements, combinations, updateLastCombination, addServerResponse } from './stores.js';
 
-
+function handleResponseApiLogs(el1, el2, responseData) {
+  console.log(`🚀 ~ handleResponseApiLogs FROM GENERATECOMBINATIONS.js ~ el1, el2, responseData:`, el1, el2, responseData);
+  if (responseData && responseData.allResults) {
+    responseData.allResults.forEach((result) => {
+      addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`);
+    });
+  }
+}
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
   const existingCombination = get(combinations)[key];
@@ -31,6 +38,8 @@ export async function generateCombination(element1, element2) {
       //   timestamp: new Date().toISOString()
       // });
       console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data);
+
+      handleResponseApiLogs(element1, element2, data)
 
       const { content: newElementName, reason, parents } = data.newElement;
 

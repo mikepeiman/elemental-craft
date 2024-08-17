@@ -132,6 +132,25 @@ export function addServerResponse(modelName, isSuccess, result) {
     });
 }
 
+export const extendedModelNames = [
+    "meta-llama/llama-2-13b-chat",
+    "google/palm-2-chat-bison",
+    "qwen/qwen-14b-chat",
+    "deepseek/deepseek-chat",
+    "meta-llama/llama-2-70b-chat",
+    "microsoft/wizardlm-2-8x22b",
+    "perplexity/llama-3.1-sonar-small-128k-online",
+    "mistralai/mistral-tiny",
+    "mistralai/mixtral-8x7b-instruct",
+    "aetherwiing/mn-starcannon-12b", // very good
+    "gryphe/mythomax-l2-13b", // very good
+    "austism/chronos-hermes-13b",
+    "anthropic/claude-3.5-sonnet:beta",
+    "anthropic/claude-3-haiku",
+    "openai/chatgpt-4o-latest",
+    "openai/gpt-4o-mini-2024-07-18",
+];
+
 export function resetServerResponses() {
     serverResponses.reset();
 }
