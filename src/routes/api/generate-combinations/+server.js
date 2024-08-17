@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
-import { addServerResponse, extendedModelNames } from '$lib/stores.js'
+import { addServerResponse, extendedModelNames, extendedModelNames2 } from '$lib/stores.js'
 
 dotenv.config();
 
@@ -43,7 +43,6 @@ const premiumModelNames = [
     "openai/chatgpt-4o-latest",
     "anthropic/claude-2",
     "google/palm-2-chat-bison",
-
     "mistralai/mistral-7b-instruct"
 ];
 
@@ -55,7 +54,7 @@ const rules = `
         4. Do not use any punctuation.
         5. The result must be a noun if a single word, but could include an adverb if two or three words
         6. Ensure a logical connection to both original elements.
-        7. Avoid portmanteau and novelty coined phrases when possible (opt for things with existing references)`
+        7. Avoid portmanteau and novelty coined phrases when possible (opt for concrete things (even if fictional) with existing references)`
 
 const goodExamples = `
 "Earth + Wind = Dust

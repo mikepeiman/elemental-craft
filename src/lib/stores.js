@@ -150,7 +150,24 @@ export const extendedModelNames = [
     "anthropic/claude-3-haiku", // decent
     "openai/chatgpt-4o-latest", // very good
     "openai/gpt-4o-mini-2024-07-18", // okay
+    "nousresearch/hermes-2-pro-llama-3-8b",
+    "austism/chronos-hermes-13b",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nousresearch/hermes-2-theta-llama-3-8b",
+    "nousresearch/nous-hermes-2-mistral-7b-dpo"
 ];
+
+export const extendedModelNames2 = [
+    "nousresearch/hermes-2-pro-llama-3-8b",
+    "austism/chronos-hermes-13b",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nousresearch/hermes-2-theta-llama-3-8b",
+    "nousresearch/nous-hermes-2-mistral-7b-dpo",
+    "aetherwiing/mn-starcannon-12b", // very good
+    "gryphe/mythomax-l2-13b", // pretty good
+    "meta-llama/llama-2-70b-chat", // pretty good
+    "microsoft/wizardlm-2-8x22b", // pretty good
+]
 
 export function resetServerResponses() {
     serverResponses.reset();
