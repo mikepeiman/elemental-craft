@@ -28,6 +28,8 @@ const errorModels = [
     "intel/neural-chat-7b",
 ]
 
+const cheapModel = "openai/gpt-4o-mini-2024-07-18"
+
 const comparativeModel = "openai/chatgpt-4o-latest"
 
 const stupidModels = [
@@ -379,7 +381,7 @@ export async function POST({ request }) {
 
        Include an explanation in the "explanation" field of the response object.`
         console.log(`🚀 ~ POST ~ singleModelMultiPrompt:`, singleModelMultiPrompt)
-        let selectedModel = comparativeModel
+        let selectedModel = cheapModel
         let result
         try {
             result = await generateCompletion(singleModelMultiPrompt, selectedModel, { max_tokens: 3000 });

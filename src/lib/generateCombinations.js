@@ -7,7 +7,8 @@ function handleResponseApiLogs(el1, el2, responseData) {
   console.log(`🚀 ~ handleResponseApiLogs FROM GENERATECOMBINATIONS.js ~ el1, el2, responseData:`, el1, el2, responseData);
   if (responseData && responseData.allResults) {
     responseData.allResults.forEach((result) => {
-      addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`);
+      // addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`); // used this before I expanded element properties
+      addServerResponse(result.model, result.success, `${el1} + ${el2}: ${responseData.newElement.name} \n ${responseData.newElement.alternativeResults.join(', ')}`);
     });
   }
 }
