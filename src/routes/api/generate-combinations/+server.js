@@ -323,21 +323,21 @@ export async function POST({ request }) {
         REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
 
         let results = [];
-        for (let i = 0; i < extendedModelNames.length; i++) {
-            const selectedModel = extendedModelNames[i];
-            try {
-                const result = await generateCompletion(prompt, selectedModel);
-                if (result !== null) {
-                    results.push({ model: selectedModel, combination: result, success: true, error: null });
-                    console.log(`🚀 ~ POST ${selectedModel} ~ result after generateCompletion:`, result);
-                } else {
-                    throw new Error('Null result returned from generateCompletion');
-                }
-            } catch (error) {
-                results.push({ model: selectedModel, combination: null, success: false, error: error.message });
-                console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
-            }
-        }
+        // for (let i = 0; i < extendedModelNames.length; i++) {
+        //     const selectedModel = extendedModelNames[i];
+        //     try {
+        //         const result = await generateCompletion(prompt, selectedModel);
+        //         if (result !== null) {
+        //             results.push({ model: selectedModel, combination: result, success: true, error: null });
+        //             console.log(`🚀 ~ POST ${selectedModel} ~ result after generateCompletion:`, result);
+        //         } else {
+        //             throw new Error('Null result returned from generateCompletion');
+        //         }
+        //     } catch (error) {
+        //         results.push({ model: selectedModel, combination: null, success: false, error: error.message });
+        //         console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
+        //     }
+        // }
 
         // console.log(`🚀 ~ generateCombinations ~ results:`, results);
         const responseFormatJson = `
@@ -362,22 +362,38 @@ export async function POST({ request }) {
           "result": "string",
           "explanation": "string"
         },
-        "mostOriginal": {
-          "result": "string",
-          "explanation": "string"
-        },
-        "mostDivergent": {
-          "result": "string",
-          "explanation": "string"
-        },
-        "mostConvergent": {
-          "result": "string",
-          "explanation": "string"
-      }`
+`
         let finalResults = results.map(r => `${r.combination}`).join('\n')
         // Final evaluation prompt
         console.log(`🚀 ~ POST ~ finalResults of all models simplified:`, finalResults)
+        const singleModelMultiPrompt = `
+        You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
 
+        Combine "${element1}" and "${element2}".
+        Consider also the inverse combination "${element2}" and "${element1}".
+               
+       You will respond in a strict format based on the guiding property: ${responseFormatJson} 
+       Each result-response should be just the new noun combination, nothing else. 
+        If response is two or three words, it can contain an adverb.
+        No articles like "a", "the".
+
+       Include an explanation in the "explanation" field of the response object.`
+        console.log(`🚀 ~ POST ~ singleModelMultiPrompt:`, singleModelMultiPrompt)
+        let selectedModel = comparativeModel
+        let result
+        try {
+            result = await generateCompletion(singleModelMultiPrompt, selectedModel, { max_tokens: 3000 });
+            console.log(`🚀 ~ POST ~ result:`, result)
+            if (result !== null) {
+                results.push({ model: selectedModel, combination: result, success: true, error: null });
+                console.log(`🚀 ~ POST ${selectedModel} ~ result after generateCompletion:`, result);
+            } else {
+                throw new Error('Null result returned from generateCompletion');
+            }
+        } catch (error) {
+            results.push({ model: selectedModel, combination: null, success: false, error: error.message });
+            console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
+        }
 
         const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
     
@@ -404,31 +420,45 @@ export async function POST({ request }) {
 }`;
 
 
+        let finalResult = result
 
+        // use this code when using multi-model promting
+        // const finalResult = await generateCompletion(evaluationPrompt, comparativeModel, { max_tokens: 1000 });
+        // console.log(`🚀 ~ POST ~ finalResult of evaluationPrompt, comparativeModel:`, finalResult)
 
-
-        const finalResult = await generateCompletion(evaluationPrompt, comparativeModel, { max_tokens: 1000 });
-        console.log(`🚀 ~ POST ~ finalResult of evaluationPrompt, comparativeModel:`, finalResult)
-
-        const jsonString = extractJSON(finalResult);
-        console.log(`🚀 ~ POST ~ jsonString:`, jsonString)
-        const finalResultParsed = JSON.parse(jsonString);
-        console.log(`🚀 ~ POST ~ finalResultParsed:`, finalResultParsed)
+        // const jsonString = extractJSON(finalResult);
+        // console.log(`🚀 ~ POST ~ jsonString:`, jsonString)
+        // const finalResultParsed = JSON.parse(jsonString);
+        // console.log(`🚀 ~ POST ~ finalResultParsed:`, finalResultParsed)
 
         const finalComparativeResponse = {};
 
-        for (const [category, content] of Object.entries(finalResultParsed)) {
+        // for (const [category, content] of Object.entries(finalResult)) {
+        //     console.log(`🚀 ~ POST ~ content:`, content)
+        //     console.log(`🚀 ~ POST ~ category:`, category)
+        //     finalComparativeResponse[category] = {
+        //         result: parseAndFormatResult(content.result),
+        //         explanation: content.explanation
+        //     };
+        // }
+
+        console.log(`\n\n@@@@@@@@@@@@@@@@@@@@@@ finalResult ${finalResult} and\n\n typeof ${typeof finalResult}\n\n`);
+        finalResult = JSON.parse(finalResult);
+        console.log(`\n\n@@@@@@@@@@@@@@@@@@@@@@ PARSED finalResult ${finalResult} and\n\n typeof PARSED ${typeof finalResult}\n\n`);
+        for (const [category, content] of Object.entries(finalResult)) {
             console.log(`🚀 ~ POST ~ content:`, content)
             console.log(`🚀 ~ POST ~ category:`, category)
             finalComparativeResponse[category] = {
-                result: parseAndFormatResult(content.result),
+                result: content.result,
                 explanation: content.explanation
             };
         }
-
         console.log(`finalComparativeResponse:`, finalComparativeResponse);
 
+
         const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${finalResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
+
+
 
         // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
         // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
@@ -454,15 +484,29 @@ export async function POST({ request }) {
             alternativeResults.add(result);
 
             // Assuming 'mostLogical' is the best result, you can change this criteria
-            if (category === 'mostRelevant') {
+            if (category === 'mostLogical') {
                 bestResult = result;
                 reason = explanation
             }
         }
 
+        const alternativeResultsArray = Array.from(alternativeResults);
+        const alternativeResultsString = alternativeResultsArray.join(', ');
+
+
+        const finalFinalPrompt = `
+            For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination.
+            ${alternativeResultsString}.
+            Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
+        `
+        console.log(`🚀 ~ POST ~ finalFinalPrompt:`, finalFinalPrompt)
+
+        const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
+        console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
+
         // Create the new element object
         const newElement = {
-            content: bestResult,
+            name: finalFinalElement || bestResult,
             finalComparativeResponse: finalComparativeResponse,
             reason: reason,
             parents: [element1, element2],
@@ -473,21 +517,18 @@ export async function POST({ request }) {
 
         // Return a proper Response object
         return json({
-            allResults: results,
-            finalComparativeResponse: finalComparativeResponse,
-            combinations: results,
-            bestCombination: bestResult,
+            allResults: results || result,
             newElement: newElement
         });
     } catch (error) {
         console.error('Error in POST handler:', error);
         // Return a proper Response object even in case of an error
-        return json({ allResults: results, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
+        return json({ allResults: results || result, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
     }
 }
 
 function parseAndFormatResult(result) {
-    const parts = result.replace('+', '=').split('=');
+    const parts = result.replace('+', ',').replace('=', ',').split(',');
     console.log(`🚀 ~ parseAndFormatResult ~ parts:`, parts)
     const formattedResult = parts[parts.length - 1].trim();
     console.log(`🚀 ~ parseAndFormatResult ~ formattedResult:`, formattedResult)
@@ -498,7 +539,7 @@ function extractJSON(text) {
     console.log(`🚀 ~ extractJSON ~ text:`, text)
     const match = text.match(/```json\n([\s\S]*?)\n```/);
     console.log(`🚀 ~ extractJSON ~ match:`, match)
-    return match ? match[1] : null;
+    return match ? match[1] : text;
 }
 
 function formatResult(result) {
