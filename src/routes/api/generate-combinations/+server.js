@@ -28,6 +28,8 @@ const errorModels = [
     "intel/neural-chat-7b",
 ]
 
+const comparativeModel = "openai/chatgpt-4o-latest"
+
 const stupidModels = [
     "togethercomputer/stripedhyena-hessian-7b",
 ]
@@ -336,11 +338,44 @@ export async function POST({ request }) {
         }
 
         // console.log(`🚀 ~ generateCombinations ~ results:`, results);
-
+        const responseFormatJson = `
+        {
+        "mostLogical": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostConcrete": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostCreative": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostRelevant": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostDescriptive": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostOriginal": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostDivergent": {
+          "result": "string",
+          "explanation": "string"
+        },
+        "mostConvergent": {
+          "result": "string",
+          "explanation": "string"
+      }`
         let finalResults = results.map(r => `${r.combination}`).join('\n')
         // Final evaluation prompt
         console.log(`🚀 ~ POST ~ finalResults:`, finalResults)
-        const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
+        const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
     
         ${finalResults}
     
@@ -353,18 +388,43 @@ export async function POST({ request }) {
     
         Provide your response of 1-3 words in Capital Case with absolutely nothing else included.`;
 
-        console.log(`🚀 ~ POST ~ evaluationPrompt:`, evaluationPrompt)
 
 
-        const finalResult = await generateCompletion(evaluationPrompt, finalModel);
+        const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}")
+
+        Here are the results of multiple models processing that combination:
+        ${finalResults}
+        After considering the preceding varied results, conduct a final evaluation that analyzes and categorizes the outputs. Structure the evaluation results in a JSON format as follows:
+        ${responseFormatJson}
+}`;
+
+
+
+
+
+        const finalResult = await generateCompletion(evaluationPrompt, comparativeModel, { max_tokens: 500 });
+        console.log(`🚀 ~ POST ~ finalResult:`, finalResult)
+
+        const jsonString = extractJSON(finalResult);
+        const finalResultParsed = JSON.parse(jsonString);
+
+        const finalComparativeResponse = {};
+
+        for (const [category, content] of Object.entries(finalResultParsed.evaluation)) {
+            finalComparativeResponse[category] = {
+                result: parseAndFormatResult(content.result),
+                explanation: content.explanation
+            };
+        }
+
+        console.log(finalComparativeResponse);
 
         const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${finalResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
 
         const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
-        console.log(`🚀 ~ POST ~ finalResult:`, finalResult)
         console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
 
-
+        reason = finalReason
         let bestCombination = finalResult
         // Process the bestCombination to extract the final term or phrase
         if (bestCombination) {
@@ -396,13 +456,13 @@ export async function POST({ request }) {
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
 
-            reason = "Fallback selection due to no valid best combination found.";
+            reason = "Fallback selection due to no valid reason given.";
         }
 
         // Create the new element object
         const newElement = {
             content: bestCombination,
-            reason: finalReason,
+            reason: reason,
             parents: [element1, element2]
         };
 
@@ -412,6 +472,7 @@ export async function POST({ request }) {
         // Return a proper Response object
         return json({
             allResults: results,
+            finalComparativeResponse: finalComparativeResponse,
             combinations: results,
             bestCombination: bestCombination,
             newElement: newElement
@@ -421,4 +482,15 @@ export async function POST({ request }) {
         // Return a proper Response object even in case of an error
         return json({ allResults: results, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
     }
+}
+
+function parseAndFormatResult(result) {
+    const parts = result.replace('+', '=').split('=');
+    const formattedResult = parts[parts.length - 1].trim();
+    return formattedResult.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function extractJSON(text) {
+    const match = text.match(/```json\n([\s\S]*?)\n```/);
+    return match ? match[1] : null;
 }

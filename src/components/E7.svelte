@@ -143,9 +143,7 @@
 					`%c${result.model}\n --- %c${smallerEl} + ${largerEl} = ${result.combination}, 'font-size: .75rem; color: black;', 'font-size: 1.25rem; color: blue;'`
 				);
 			});
-			if (responseData) {
-				handleResponseApiLogs(smallerEl, largerEl, responseData);
-			}
+
 			if (newElement) {
 				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
 			}
@@ -166,15 +164,6 @@
 		} else {
 			console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
 		}
-	}
-
-	function handleResponseApiLogs(el1, el2, responseData) {
-		console.log(`🚀 ~ handleResponseApiLogs ~ el1, el2, responseData:`, el1, el2, responseData);
-		// if (responseData && responseData.allResults) {
-		// 	responseData.allResults.forEach((result) => {
-		// 		addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`);
-		// 	});
-		// }
 	}
 
 	function logServerResponses() {
