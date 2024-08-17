@@ -134,7 +134,7 @@
 				console.log(`${result.model}\n --- ${smallerEl} + ${largerEl} = ${result.combination} `);
 			});
 			if (responseData) {
-				handleResponseApiLogs(responseData);
+				handleResponseApiLogs(smallerEl, largerEl, responseData);
 			}
 			if (newElement) {
 				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
@@ -158,13 +158,13 @@
 		}
 	}
 
-	function handleResponseApiLogs(responseData) {
+	function handleResponseApiLogs(el1, el2, responseData) {
 		if (responseData && responseData.allResults) {
 			responseData.allResults.forEach((result) => {
 				addServerResponse(
 					result.model,
 					result.success, // Pass true if success, false or null if error
-					result.combination // The actual result
+					`${el1} + ${el2}: ${result.combination}`
 				);
 			});
 		}

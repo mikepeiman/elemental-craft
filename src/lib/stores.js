@@ -128,7 +128,13 @@ export function addServerResponse(modelName, isSuccess, result) {
             timestamps: [...newStore[modelName].timestamps, Date.now()]
         };
 
-        console.log('Updated store for model:', modelName, newStore[modelName]);
+        console.log(`Updated store for model:, ${modelName}
+             ${newStore[modelName].errorCount} errors
+             ${newStore[modelName].successCount} successes`)
+        newStore[modelName].results.forEach(element => {
+            console.log(`    result: `, element)
+
+        });
         return newStore;
     });
 }
