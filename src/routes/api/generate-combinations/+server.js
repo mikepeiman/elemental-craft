@@ -285,7 +285,7 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         }
 
         const data = await response.json();
-        console.log(`🚀 ~ generateCompletion ~ data:`, data); // Log the entire response
+        console.log(`🚀 ~ generateCompletion for an individual model ${modelName}  ~ data:`, data); // Log the entire response
 
 
         if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
@@ -293,7 +293,7 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         }
 
         let msg = data.choices[0].message.content.trim()
-        console.log(`🚀 ~ generateCompletion ~ msg:`, msg)
+        console.log(`🚀 ~ generateCompletion  for an individual model ${modelName}  ~ msg:`, msg)
         return msg
     } catch (error) {
         console.error('Error in generateCompletion:', error);
@@ -312,7 +312,9 @@ export async function POST({ request }) {
         Combine "${element1}" and "${element2}" into a thing (a noun).
         Consider also the inverse combination "${element2}" and "${element1}".
                
-        Your entire response should be just the new noun combination, nothing else.
+        Your entire response should be just the new noun combination, nothing else. 
+        If response is two or three words, it can contain an adverb.
+        No articles like "a", "the".
         
         Good examples of combinations and results:
         ${goodExamples}
@@ -327,7 +329,7 @@ export async function POST({ request }) {
                 const result = await generateCompletion(prompt, selectedModel);
                 if (result !== null) {
                     results.push({ model: selectedModel, combination: result, success: true, error: null });
-                    console.log(`🚀 ~ POST ${selectedModel} ~ result:`, result);
+                    console.log(`🚀 ~ POST ${selectedModel} ~ result after generateCompletion:`, result);
                 } else {
                     throw new Error('Null result returned from generateCompletion');
                 }
@@ -374,7 +376,9 @@ export async function POST({ request }) {
       }`
         let finalResults = results.map(r => `${r.combination}`).join('\n')
         // Final evaluation prompt
-        console.log(`🚀 ~ POST ~ finalResults:`, finalResults)
+        console.log(`🚀 ~ POST ~ finalResults of all models simplified:`, finalResults)
+
+
         const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
     
         ${finalResults}
@@ -396,35 +400,41 @@ export async function POST({ request }) {
         ${finalResults}
         After considering the preceding varied results, conduct a final evaluation that analyzes and categorizes the outputs. Structure the evaluation results in a JSON format as follows:
         ${responseFormatJson}
+        limit reasons given to 50-100 words max
 }`;
 
 
 
 
 
-        const finalResult = await generateCompletion(evaluationPrompt, comparativeModel, { max_tokens: 500 });
-        console.log(`🚀 ~ POST ~ finalResult:`, finalResult)
+        const finalResult = await generateCompletion(evaluationPrompt, comparativeModel, { max_tokens: 1000 });
+        console.log(`🚀 ~ POST ~ finalResult of evaluationPrompt, comparativeModel:`, finalResult)
 
         const jsonString = extractJSON(finalResult);
+        console.log(`🚀 ~ POST ~ jsonString:`, jsonString)
         const finalResultParsed = JSON.parse(jsonString);
+        console.log(`🚀 ~ POST ~ finalResultParsed:`, finalResultParsed)
 
         const finalComparativeResponse = {};
 
-        for (const [category, content] of Object.entries(finalResultParsed.evaluation)) {
+        for (const [category, content] of Object.entries(finalResultParsed)) {
+            console.log(`🚀 ~ POST ~ content:`, content)
+            console.log(`🚀 ~ POST ~ category:`, category)
             finalComparativeResponse[category] = {
                 result: parseAndFormatResult(content.result),
                 explanation: content.explanation
             };
         }
 
-        console.log(finalComparativeResponse);
+        console.log(`finalComparativeResponse:`, finalComparativeResponse);
 
         const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${finalResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
 
-        const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
-        console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
+        // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
+        // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
 
-        reason = finalReason
+        // reason = finalReason
+        let reason = "no reason given"
         let bestCombination = finalResult
         // Process the bestCombination to extract the final term or phrase
         if (bestCombination) {
@@ -462,6 +472,7 @@ export async function POST({ request }) {
         // Create the new element object
         const newElement = {
             content: bestCombination,
+            finalComparativeResponse: finalComparativeResponse,
             reason: reason,
             parents: [element1, element2]
         };
@@ -486,11 +497,15 @@ export async function POST({ request }) {
 
 function parseAndFormatResult(result) {
     const parts = result.replace('+', '=').split('=');
+    console.log(`🚀 ~ parseAndFormatResult ~ parts:`, parts)
     const formattedResult = parts[parts.length - 1].trim();
+    console.log(`🚀 ~ parseAndFormatResult ~ formattedResult:`, formattedResult)
     return formattedResult.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
 function extractJSON(text) {
+    console.log(`🚀 ~ extractJSON ~ text:`, text)
     const match = text.match(/```json\n([\s\S]*?)\n```/);
+    console.log(`🚀 ~ extractJSON ~ match:`, match)
     return match ? match[1] : null;
 }
