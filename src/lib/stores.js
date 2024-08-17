@@ -99,6 +99,7 @@ export function startGeneration() {
 }
 
 export function stopGeneration() {
+    console.log(`🚀 ~ STORES.js stopGeneration ~ stopGeneration`)
     generationStore.update(state => ({ ...state, shouldStop: true }));
 }
 
@@ -134,21 +135,21 @@ export function addServerResponse(modelName, isSuccess, result) {
 
 export const extendedModelNames = [
     "meta-llama/llama-2-13b-chat",
-    "google/palm-2-chat-bison",
-    "qwen/qwen-14b-chat",
-    "deepseek/deepseek-chat",
-    "meta-llama/llama-2-70b-chat",
-    "microsoft/wizardlm-2-8x22b",
-    "perplexity/llama-3.1-sonar-small-128k-online",
-    "mistralai/mistral-tiny",
+    "google/palm-2-chat-bison", // mixed
+    "qwen/qwen-14b-chat", // mixed
+    "deepseek/deepseek-chat", // some good, some mixed
+    "meta-llama/llama-2-70b-chat", // pretty good
+    "microsoft/wizardlm-2-8x22b", // pretty good
+    "perplexity/llama-3.1-sonar-small-128k-online", // okay
+    "mistralai/mistral-tiny", // okay, poor at following instructions
     "mistralai/mixtral-8x7b-instruct",
     "aetherwiing/mn-starcannon-12b", // very good
-    "gryphe/mythomax-l2-13b", // very good
-    "austism/chronos-hermes-13b",
-    "anthropic/claude-3.5-sonnet:beta",
-    "anthropic/claude-3-haiku",
-    "openai/chatgpt-4o-latest",
-    "openai/gpt-4o-mini-2024-07-18",
+    "gryphe/mythomax-l2-13b", // pretty good
+    "austism/chronos-hermes-13b", // mixed
+    "anthropic/claude-3.5-sonnet:beta", // good
+    "anthropic/claude-3-haiku", // decent
+    "openai/chatgpt-4o-latest", // very good
+    "openai/gpt-4o-mini-2024-07-18", // okay
 ];
 
 export function resetServerResponses() {

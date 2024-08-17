@@ -41,7 +41,7 @@ export async function generateCombination(element1, element2) {
 
       handleResponseApiLogs(element1, element2, data)
 
-      const { content: newElementName, reason, parents } = data.newElement;
+      const { content: newElementName, reason, alternativeResults, parents } = data.newElement;
 
       if (typeof newElementName !== 'string' || newElementName.length === 0) {
         throw new Error('Invalid newElementName received from server');
@@ -54,6 +54,7 @@ export async function generateCombination(element1, element2) {
           return [...e, {
             id: Date.now(),
             content: newElementName,
+            alternativeResults: alternativeResults || [],
             parents: parents || [element1, element2],
             reason: reason || null
           }];

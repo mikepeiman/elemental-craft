@@ -435,57 +435,48 @@ export async function POST({ request }) {
 
         // reason = finalReason
         let reason = "no reason given"
-        let bestCombination = finalResult
-        // Process the bestCombination to extract the final term or phrase
-        if (bestCombination) {
-            // Split on '=' or ':' and take the last part
-            const parts = bestCombination.split(/[=:]/);
-            bestCombination = parts[parts.length - 1].trim();
 
-            // Remove any remaining punctuation and ensure proper capitalization
-            bestCombination = bestCombination
-                .replace(/[^\w\s-]/g, '')  // Remove any punctuation except hyphens
-                .split(/\s+/)  // Split into words
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())  // Capitalize each word
-                .join(' ');  // Join back into a string
+        // Process finalComparativeResponse
+        for (const category in finalComparativeResponse) {
+            finalComparativeResponse[category].result = formatResult(finalComparativeResponse[category].result);
         }
 
-        // If no valid best combination is found, select the first valid combination from the results
-        if (!bestCombination) {
-            const validCombination = results.find(r => {
-                const combination = r.combination.split(/[=:]/).pop().trim().replace(/[^\w\s-]/g, '');
-                return combination && combination.split(' ').length <= 3;
-            });
-            bestCombination = validCombination
-                ? validCombination.combination.split(/[=:]/).pop().trim().replace(/[^\w\s-]/g, '')
-                : 'No valid combination found';
+        console.log(`finalComparativeResponse:`, finalComparativeResponse);
 
-            // Ensure proper capitalization
-            bestCombination = bestCombination
-                .split(/\s+/)
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
+        // 2. & 3. Add alternativeResults and assign best result
+        const alternativeResults = new Set();
+        let bestResult = '';
+        let highestScore = -1;
 
-            reason = "Fallback selection due to no valid reason given.";
+        for (const category in finalComparativeResponse) {
+            const result = finalComparativeResponse[category].result;
+            const explanation = finalComparativeResponse[category].explanation;
+            alternativeResults.add(result);
+
+            // Assuming 'mostLogical' is the best result, you can change this criteria
+            if (category === 'mostRelevant') {
+                bestResult = result;
+                reason = explanation
+            }
         }
 
         // Create the new element object
         const newElement = {
-            content: bestCombination,
+            content: bestResult,
             finalComparativeResponse: finalComparativeResponse,
             reason: reason,
-            parents: [element1, element2]
+            parents: [element1, element2],
+            alternativeResults: Array.from(alternativeResults)
         };
 
         console.log(`🚀 ~ New element created:`, newElement);
-
 
         // Return a proper Response object
         return json({
             allResults: results,
             finalComparativeResponse: finalComparativeResponse,
             combinations: results,
-            bestCombination: bestCombination,
+            bestCombination: bestResult,
             newElement: newElement
         });
     } catch (error) {
@@ -508,4 +499,12 @@ function extractJSON(text) {
     const match = text.match(/```json\n([\s\S]*?)\n```/);
     console.log(`🚀 ~ extractJSON ~ match:`, match)
     return match ? match[1] : null;
+}
+
+function formatResult(result) {
+    const parts = result.split(/[+=]/);
+    return parts[parts.length - 1].trim()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
 }

@@ -32,7 +32,7 @@
 	let overlappingPair = null;
 	let dragOffset = { x: 0, y: 0 };
 	let combiningElements = null;
-	let randomCombinationCount = 1;
+	let randomCombinationCount = 5;
 	let isGenerating = false;
 
 	onMount(() => {
@@ -314,7 +314,7 @@
 	<!-- Central Graph View -->
 	<div id="main-panel" class="w-3/4 p-4 h-full relative">
 		<div class="flex justify-between items-around">
-			<div class="flex flex-col px-6">
+			<div class="flex flex-col px-6 max-w-[50%]">
 				<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
 				<div class="mb-4">
 					Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
