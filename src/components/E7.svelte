@@ -18,8 +18,10 @@
 		saveServerResponsesToFile,
 		loadServerResponsesFromFile,
 		extendedModelNames,
-		selectedModels
+		selectedModels,
+		combinationStore
 	} from '$lib/stores.js';
+	$: console.log(`🚀 ~ combinationStore:`, $combinationStore);
 	$: console.log(`🚀 ~ selectedModels in E7:`, $selectedModels);
 
 	// import {
@@ -68,7 +70,8 @@
 			});
 		}
 	}
-	export async function generateCombination(element1, element2, modelName) {
+
+	async function generateCombination(element1, element2) {
 		const key = [element1, element2].sort().join(',');
 		const existingCombination = get(combinations)[key];
 
@@ -77,82 +80,79 @@
 			return existingCombination;
 		}
 
-		try {
-			console.log(`***API CALL*** Generating: ${element1} + ${element2}`);
-			const response = await fetch('/api/generate-combinations', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ element1, element2, modelName })
-			});
+		let returnObject = null;
 
-			console.log(`🚀 ~ generateCombination ~ response:`, response);
-			if (response.ok) {
-				const data = await response.json();
-				// addServerResponse(selectedModel, {
-				//   type: 'success',
-				//   response: data,
-				//   timestamp: new Date().toISOString()
-				// });
-				console.log(
-					`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`,
-					data
-				);
-
-				handleResponseApiLogs(element1, element2, data);
-
-				const {
-					name: newElementName,
-					reason,
-					finalComparativeResponse,
-					alternativeResults,
-					parents
-				} = data.newElement;
-
-				if (typeof newElementName !== 'string' || newElementName.length === 0) {
-					throw new Error('Invalid newElementName received from server');
-				}
-
-				// Update stores
-				combinations.update((c) => ({ ...c, [key]: newElementName }));
-				elements.update((e) => {
-					if (!e.some((el) => el.content === newElementName)) {
-						return [
-							...e,
-							{
-								id: Date.now(),
-								content: newElementName,
-								alternativeResults: alternativeResults || [],
-								finalComparativeResponse: finalComparativeResponse || null,
-								parents: parents || [element1, element2],
-								reason: reason || null
-							}
-						];
-					}
-					return e;
+		for (const modelName of $selectedModels) {
+			console.log(`🚀 ~ $selectedModels loop ~ modelName:`, modelName);
+			try {
+				console.log(`***API CALL*** Generating: ${element1} + ${element2}`);
+				const response = await fetch('/api/generate-combinations', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ element1, element2, modelName })
 				});
 
-				console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${newElementName}`);
-				console.log(`Reason: ${reason || 'No reason provided'}`);
+				console.log(`🚀 ~ generateCombination ~ response:`, response);
+				if (response.ok) {
+					const data = await response.json();
+					console.log(
+						`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`,
+						data
+					);
 
-				let returnObject = {
-					data: data,
-					newElementName: newElementName
-				};
-				console.log(`🚀 ~ generateCombination ~ returnObject:`, returnObject);
-				updateLastCombination(element1, element2, newElementName);
-				return returnObject;
-			} else {
-				// addServerResponse(selectedModel, {
-				//   type: response.status,
-				//   error: response || 'Unknown error',
-				//   timestamp: new Date().toISOString()
-				// });
-				throw new Error(`Server responded with status: ${response.status}`);
+					handleResponseApiLogs(element1, element2, data);
+
+					const {
+						name: newElementName,
+						reason,
+						finalComparativeResponse,
+						alternativeResults,
+						parents
+					} = data.newElement;
+
+					if (typeof newElementName !== 'string' || newElementName.length === 0) {
+						throw new Error('Invalid newElementName received from server');
+					}
+
+					// Update stores
+					combinations.update((c) => ({ ...c, [key]: newElementName }));
+					elements.update((e) => {
+						if (!e.some((el) => el.content === newElementName)) {
+							return [
+								...e,
+								{
+									id: Date.now(),
+									content: newElementName,
+									alternativeResults: alternativeResults || [],
+									finalComparativeResponse: finalComparativeResponse || null,
+									parents: parents || [element1, element2],
+									reason: reason || null
+								}
+							];
+						}
+						console.log(`🚀 ~ combination return elements.update ~ e:`, e);
+						return e;
+					});
+
+					console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${newElementName}`);
+					console.log(`Reason: ${reason || 'No reason provided'}`);
+
+					returnObject = {
+						data: data,
+						newElementName: newElementName
+					};
+					console.log(`🚀 ~ generateCombination ~ returnObject:`, returnObject);
+					updateLastCombination(element1, element2, newElementName);
+				} else {
+					throw new Error(`Server responded with status: ${response.status}`);
+				}
+			} catch (error) {
+				console.error('Error generating combination:', error);
+				// Continue to next model if there's an error
 			}
-		} catch (error) {
-			console.error('Error generating combination:', error);
-			return null;
 		}
+
+		return returnObject;
 	}
 
 	let shouldStopGeneration = false;
@@ -191,7 +191,7 @@
 				);
 				updateLastCombination(smallerEl, largerEl, existingCombination);
 			} else {
-				const response = await generateCombination(smallerEl, largerEl, modelName);
+				const response = await generateCombination(smallerEl, largerEl);
 
 				const { newElementName } = response || {};
 				const { data } = response || {};
@@ -289,13 +289,10 @@
 		overlappingPair = null;
 	}
 
-	/**
-	 * @type {any}
-	 */
-	let responseData;
-
 	async function combineElements(element1, element2, x, y) {
 		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
+
+		// Check if both elements are defined
 		if (!element1 || !element2) {
 			console.log(
 				'🚀 ~ combineElements ~ One or both elements are undefined, aborting combination'
@@ -303,47 +300,73 @@
 			return;
 		}
 
+		// Sort elements to ensure consistent key creation
 		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
-		const combinationKey = `${smallerEl},${largerEl}`;
+		console.log(`🚀 ~ combineElements ~ smallerEl, largerEl:`, smallerEl, largerEl);
 
 		let newElement;
-		if ($combinations[combinationKey]) {
-			newElement = $combinations[combinationKey];
-			console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
-		} else {
-			let generationResults = await generateCombination(smallerEl, largerEl, modelName);
-			console.log('🚀 ~ combineElements ~ Generating new combination');
-			console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
-			newElement = generationResults['newElementName'];
-			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
+		let responseData;
 
-			let responseData = generationResults['data'];
-			console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
-			responseData.allResults.forEach((result) => {
-				console.log(
-					`%c${result.model}\n --- %c${smallerEl} + ${largerEl} = ${result.combination}, 'font-size: .75rem; color: black;', 'font-size: 1.25rem; color: blue;'`
-				);
-			});
+		try {
+			// Try to get existing combination from the store
+			let storedCombination = combinationStore.getCombination(smallerEl, largerEl);
+
+			if (storedCombination) {
+				// If combination exists in store, use it
+				newElement = storedCombination.newElementName;
+				responseData = storedCombination.data;
+				console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
+			} else {
+				// If not in store, generate new combination
+				let generationResults = await generateCombination(smallerEl, largerEl);
+				console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
+
+				if (generationResults && generationResults.newElementName) {
+					newElement = generationResults.newElementName;
+					responseData = generationResults.data;
+
+					// Store the new combination
+					combinationStore.setCombination(smallerEl, largerEl, generationResults);
+
+					console.log(`🚀 ~ combineElements ~ newElement:`, newElement);
+					console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
+
+					// Log each result
+					responseData.allResults.forEach((result) => {
+						console.log(
+							`%c${result.model}\n --- %c${smallerEl} + ${largerEl} = ${result.combination}`,
+							'font-size: .75rem; color: black;',
+							'font-size: 1.25rem; color: blue;'
+						);
+					});
+				} else {
+					console.error('Generation results or newElementName is undefined');
+					return null;
+				}
+			}
 
 			if (newElement) {
-				combinations.update((c) => ({ ...c, [combinationKey]: newElement }));
-			}
-		}
+				console.log('🚀 ~ combineElements ~ Creating new combined element');
 
-		if (newElement) {
-			console.log('🚀 ~ combineElements ~ Creating new combined element');
-			removeDragElement(element1.id);
-			removeDragElement(element2.id);
-			addDragElement({
-				content: newElement,
-				x,
-				y,
-				isNew: true,
-				parents: [element1.content, element2.content]
-			});
-			updateLastCombination(smallerEl, largerEl, newElement);
-		} else {
-			console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
+				// Remove old elements and add new element
+				removeDragElement(element1.id);
+				removeDragElement(element2.id);
+				addDragElement({
+					content: newElement,
+					x,
+					y,
+					isNew: true,
+					parents: [element1.content, element2.content]
+				});
+
+				// Update last combination (assuming this function exists and needs to be called)
+				updateLastCombination(smallerEl, largerEl, newElement);
+			} else {
+				console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
+			}
+		} catch (error) {
+			console.error('Error in combineElements:', error);
+			return null;
 		}
 	}
 

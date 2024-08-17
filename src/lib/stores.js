@@ -70,8 +70,29 @@ export const elements = createPersistentStore('elements', [
 // { id: 10, content: 'Humor', parents: [] },
 // Your model collections
 
+function createCombinationStore() {
+    const store = createPersistentStore('combinationStore', {});
 
-// Create a persistent store for the selected model
+    return {
+        ...store,
+        setCombination: (element1, element2, data) => store.update(storeValue => {
+            storeValue[`${element1}_${element2}`] = {
+                data: data.data,
+                newElementName: data.newElementName
+            };
+            return storeValue;
+        }),
+        getCombination: (element1, element2) => {
+            let storeValue;
+            store.subscribe(value => {
+                storeValue = value;
+            })();
+            return storeValue[`${element1}_${element2}`] || storeValue[`${element2}_${element1}`];
+        }
+    };
+}
+
+export const combinationStore = createCombinationStore();
 export const selectedModels = createPersistentStore('selectedModels', []);
 export const combinations = createPersistentStore('combinations', {});
 
