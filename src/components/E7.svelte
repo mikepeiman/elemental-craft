@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { draggable } from '@neodrag/svelte';
+
 	import {
 		elements,
 		dragElements,
@@ -16,14 +17,18 @@
 		serverResponses,
 		saveServerResponsesToFile,
 		loadServerResponsesFromFile,
-		extendedModelNames
+		extendedModelNames,
+		selectedModels
 	} from '$lib/stores.js';
+	$: console.log(`🚀 ~ selectedModels in E7:`, $selectedModels);
 
-	import {
-		generateCombination,
-		generateRandomCombinations,
-		stopRandomGeneration
-	} from '$lib/generateCombinations.js';
+	// import {
+	// 	generateCombination,
+	// 	generateRandomCombinations,
+	// 	stopRandomGeneration
+	// } from '$lib/generateCombinations.js';
+	import ModelSelector from './ModelSelector.svelte';
+	import { get } from 'svelte/store';
 
 	$: console.log(`🚀 ~ $serverResponses:`, $serverResponses);
 
@@ -40,6 +45,182 @@
 		initializeNextId($dragElements);
 		console.log('🚀 ~ onMount ~ Component mounted');
 	});
+
+	// $lib/generateCombinations.js
+
+	// import { elements, combinations, updateLastCombination, addServerResponse } from '$lib/stores.js';
+
+	function handleResponseApiLogs(el1, el2, responseData) {
+		console.log(
+			`🚀 ~ handleResponseApiLogs FROM GENERATECOMBINATIONS.js ~ el1, el2, responseData:`,
+			el1,
+			el2,
+			responseData
+		);
+		if (responseData && responseData.allResults) {
+			responseData.allResults.forEach((result) => {
+				// addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`); // used this before I expanded element properties
+				addServerResponse(
+					result.model,
+					result.success,
+					`${el1} + ${el2}: ${responseData.newElement.name} \n ${responseData.newElement.alternativeResults.join(', ')}`
+				);
+			});
+		}
+	}
+	export async function generateCombination(element1, element2, modelName) {
+		const key = [element1, element2].sort().join(',');
+		const existingCombination = get(combinations)[key];
+
+		if (existingCombination) {
+			updateLastCombination(element1, element2, existingCombination);
+			return existingCombination;
+		}
+
+		try {
+			console.log(`***API CALL*** Generating: ${element1} + ${element2}`);
+			const response = await fetch('/api/generate-combinations', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ element1, element2, modelName })
+			});
+
+			console.log(`🚀 ~ generateCombination ~ response:`, response);
+			if (response.ok) {
+				const data = await response.json();
+				// addServerResponse(selectedModel, {
+				//   type: 'success',
+				//   response: data,
+				//   timestamp: new Date().toISOString()
+				// });
+				console.log(
+					`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`,
+					data
+				);
+
+				handleResponseApiLogs(element1, element2, data);
+
+				const {
+					name: newElementName,
+					reason,
+					finalComparativeResponse,
+					alternativeResults,
+					parents
+				} = data.newElement;
+
+				if (typeof newElementName !== 'string' || newElementName.length === 0) {
+					throw new Error('Invalid newElementName received from server');
+				}
+
+				// Update stores
+				combinations.update((c) => ({ ...c, [key]: newElementName }));
+				elements.update((e) => {
+					if (!e.some((el) => el.content === newElementName)) {
+						return [
+							...e,
+							{
+								id: Date.now(),
+								content: newElementName,
+								alternativeResults: alternativeResults || [],
+								finalComparativeResponse: finalComparativeResponse || null,
+								parents: parents || [element1, element2],
+								reason: reason || null
+							}
+						];
+					}
+					return e;
+				});
+
+				console.log(`***API CALL*** Generated: ${element1} + ${element2} = ${newElementName}`);
+				console.log(`Reason: ${reason || 'No reason provided'}`);
+
+				let returnObject = {
+					data: data,
+					newElementName: newElementName
+				};
+				console.log(`🚀 ~ generateCombination ~ returnObject:`, returnObject);
+				updateLastCombination(element1, element2, newElementName);
+				return returnObject;
+			} else {
+				// addServerResponse(selectedModel, {
+				//   type: response.status,
+				//   error: response || 'Unknown error',
+				//   timestamp: new Date().toISOString()
+				// });
+				throw new Error(`Server responded with status: ${response.status}`);
+			}
+		} catch (error) {
+			console.error('Error generating combination:', error);
+			return null;
+		}
+	}
+
+	let shouldStopGeneration = false;
+
+	export async function generateRandomCombinations(count) {
+		let shouldStopGeneration = false;
+		let generatedCombinations = 0;
+		let attempts = 0;
+		const maxAttempts = count * 10; // Adjust this multiplier as needed
+
+		while (generatedCombinations < count && attempts < maxAttempts) {
+			attempts++;
+			console.log(`🚀 ~ generateRandomCombinations ~ attempt:`, attempts);
+
+			if (shouldStopGeneration) {
+				console.log('Generation stopped by user.');
+				break;
+			}
+
+			const elementArray = get(elements);
+			const element1 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
+			const element2 = elementArray[Math.floor(Math.random() * elementArray.length)].content;
+
+			const [smallerEl, largerEl] = [element1, element2].sort();
+			const key = `${smallerEl},${largerEl}`;
+			console.log(`🚀 ~ generateRandomCombinations ~ key:`, key);
+			console.log(`🚀 ~ generateRandomCombinations ~ element1, element2:`, smallerEl, largerEl);
+
+			const currentCombinations = get(combinations);
+			const existingCombination = currentCombinations[key];
+			console.log(`🚀 ~ generateRandomCombinations ~ existingCombination:`, existingCombination);
+
+			if (existingCombination) {
+				console.log(
+					`Combination already exists: ${smallerEl} + ${largerEl} = ${existingCombination}`
+				);
+				updateLastCombination(smallerEl, largerEl, existingCombination);
+			} else {
+				const response = await generateCombination(smallerEl, largerEl, modelName);
+
+				const { newElementName } = response || {};
+				const { data } = response || {};
+
+				if (newElementName) {
+					generatedCombinations++;
+					console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newElementName}`);
+					combinations.update((c) => ({ ...c, [key]: newElementName }));
+					updateLastCombination(smallerEl, largerEl, newElementName);
+				}
+			}
+
+			// Add a small delay to allow for smoother stopping
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+
+		if (attempts >= maxAttempts) {
+			console.warn(
+				`Reached maximum attempts (${maxAttempts}) before generating ${count} combinations.`
+			);
+		}
+
+		console.log(`Generated ${generatedCombinations} new combinations in ${attempts} attempts.`);
+		shouldStopGeneration = false;
+	}
+
+	export function stopRandomGeneration() {
+		shouldStopGeneration = true;
+	}
 
 	function handleDragStart(event, element) {
 		console.log(`🚀 ~ handleDragStart ~ element:`, element);
@@ -130,7 +311,7 @@
 			newElement = $combinations[combinationKey];
 			console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
 		} else {
-			let generationResults = await generateCombination(smallerEl, largerEl);
+			let generationResults = await generateCombination(smallerEl, largerEl, modelName);
 			console.log('🚀 ~ combineElements ~ Generating new combination');
 			console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
 			newElement = generationResults['newElementName'];
@@ -167,9 +348,7 @@
 	}
 
 	function logServerResponses() {
-		console.log(`🚀 ~ logServerResponses ~ extendedModelNames:`, extendedModelNames);
-
-		extendedModelNames.forEach((modelName) => {
+		$selectedModels.forEach((modelName) => {
 			if ($serverResponses[modelName]) {
 				console.log(
 					`%cModel: ${modelName}`,
@@ -314,12 +493,13 @@
 	<!-- Central Graph View -->
 	<div id="main-panel" class="w-3/4 p-4 h-full relative">
 		<div class="flex justify-between items-around">
-			<div class="flex flex-col px-6 max-w-[50%]">
+			<div class="flex flex-col px-6 max-w-[25%]">
 				<h2 class="text-2xl font-semibold mb-4">Combination Area</h2>
 				<div class="mb-4">
 					Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
 				</div>
 			</div>
+			<ModelSelector />
 			<div class="flex">
 				<div class="flex items-center space-x-4">
 					<div class="flex flex-col">
@@ -344,18 +524,18 @@
 						<button
 							on:click={stopRandomGeneration}
 							disabled={!isGenerating}
-							class="bg-red-500/50 hover:bg-red-500/25 px-4 py-2 rounded disabled:opacity-50"
+							class="bg-indigo-300 hover:bg-indigo-300 px-4 py-2 rounded disabled:opacity-50"
 						>
 							Stop Generation
 						</button>
+						<input
+							type="number"
+							bind:value={randomCombinationCount}
+							min="1"
+							max="100"
+							class="bg-gray-700 text-white px-2 py-1 rounded"
+						/>
 					</div>
-					<input
-						type="number"
-						bind:value={randomCombinationCount}
-						min="1"
-						max="100"
-						class="bg-gray-700 text-white px-2 py-1 rounded"
-					/>
 				</div>
 			</div>
 		</div>

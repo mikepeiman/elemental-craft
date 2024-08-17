@@ -3,6 +3,42 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
+
+export const extendedModelNames = [
+    "meta-llama/llama-2-13b-chat",
+    "google/palm-2-chat-bison", // mixed
+    "qwen/qwen-14b-chat", // mixed
+    "deepseek/deepseek-chat", // some good, some mixed
+    "meta-llama/llama-2-70b-chat", // pretty good
+    "microsoft/wizardlm-2-8x22b", // pretty good
+    "perplexity/llama-3.1-sonar-small-128k-online", // okay
+    "mistralai/mistral-tiny", // okay, poor at following instructions
+    "mistralai/mixtral-8x7b-instruct",
+    "aetherwiing/mn-starcannon-12b", // very good
+    "gryphe/mythomax-l2-13b", // pretty good
+    "austism/chronos-hermes-13b", // mixed
+    "anthropic/claude-3.5-sonnet:beta", // good
+    "anthropic/claude-3-haiku", // decent
+    "openai/chatgpt-4o-latest", // very good
+    "openai/gpt-4o-mini-2024-07-18", // okay
+    "nousresearch/hermes-2-pro-llama-3-8b",
+    "austism/chronos-hermes-13b",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nousresearch/hermes-2-theta-llama-3-8b",
+    "nousresearch/nous-hermes-2-mistral-7b-dpo"
+];
+
+export const extendedModelNames2 = [
+    "nousresearch/hermes-2-pro-llama-3-8b",
+    "austism/chronos-hermes-13b",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nousresearch/hermes-2-theta-llama-3-8b",
+    "nousresearch/nous-hermes-2-mistral-7b-dpo",
+    "aetherwiing/mn-starcannon-12b", // very good
+    "gryphe/mythomax-l2-13b", // pretty good
+    "meta-llama/llama-2-70b-chat", // pretty good
+    "microsoft/wizardlm-2-8x22b", // pretty good
+]
 function createPersistentStore(key, initialValue) {
     const storedValue = browser ? localStorage.getItem(key) : null;
     const store = writable(storedValue ? JSON.parse(storedValue) : initialValue);
@@ -32,7 +68,11 @@ export const elements = createPersistentStore('elements', [
 // { id: 8, content: 'Music', parents: [] },
 // { id: 9, content: 'Cell', parents: [] },
 // { id: 10, content: 'Humor', parents: [] },
+// Your model collections
 
+
+// Create a persistent store for the selected model
+export const selectedModels = createPersistentStore('selectedModels', []);
 export const combinations = createPersistentStore('combinations', {});
 
 export const dragElements = createPersistentStore('dragElements', []);
@@ -133,41 +173,6 @@ export function addServerResponse(modelName, isSuccess, result) {
     });
 }
 
-export const extendedModelNames = [
-    "meta-llama/llama-2-13b-chat",
-    "google/palm-2-chat-bison", // mixed
-    "qwen/qwen-14b-chat", // mixed
-    "deepseek/deepseek-chat", // some good, some mixed
-    "meta-llama/llama-2-70b-chat", // pretty good
-    "microsoft/wizardlm-2-8x22b", // pretty good
-    "perplexity/llama-3.1-sonar-small-128k-online", // okay
-    "mistralai/mistral-tiny", // okay, poor at following instructions
-    "mistralai/mixtral-8x7b-instruct",
-    "aetherwiing/mn-starcannon-12b", // very good
-    "gryphe/mythomax-l2-13b", // pretty good
-    "austism/chronos-hermes-13b", // mixed
-    "anthropic/claude-3.5-sonnet:beta", // good
-    "anthropic/claude-3-haiku", // decent
-    "openai/chatgpt-4o-latest", // very good
-    "openai/gpt-4o-mini-2024-07-18", // okay
-    "nousresearch/hermes-2-pro-llama-3-8b",
-    "austism/chronos-hermes-13b",
-    "nousresearch/hermes-3-llama-3.1-405b",
-    "nousresearch/hermes-2-theta-llama-3-8b",
-    "nousresearch/nous-hermes-2-mistral-7b-dpo"
-];
-
-export const extendedModelNames2 = [
-    "nousresearch/hermes-2-pro-llama-3-8b",
-    "austism/chronos-hermes-13b",
-    "nousresearch/hermes-3-llama-3.1-405b",
-    "nousresearch/hermes-2-theta-llama-3-8b",
-    "nousresearch/nous-hermes-2-mistral-7b-dpo",
-    "aetherwiing/mn-starcannon-12b", // very good
-    "gryphe/mythomax-l2-13b", // pretty good
-    "meta-llama/llama-2-70b-chat", // pretty good
-    "microsoft/wizardlm-2-8x22b", // pretty good
-]
 
 export function resetServerResponses() {
     serverResponses.reset();
