@@ -1,6 +1,6 @@
 // $lib/stores.js
 
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
 function createPersistentStore(key, initialValue) {
@@ -135,4 +135,51 @@ export function addServerResponse(modelName, isSuccess, result) {
 
 export function resetServerResponses() {
     serverResponses.reset();
+}
+
+// serverResponsesHelper.js
+// Function to save serverResponses to a local file
+export function saveServerResponsesToFile() {
+    const data = JSON.stringify(get(serverResponses));
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'serverResponses.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Function to load serverResponses from a local file
+export function loadServerResponsesFromFile() {
+    return new Promise((resolve, reject) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        serverResponses.set(data);
+                        resolve('Server responses loaded successfully');
+                    } catch (error) {
+                        reject('Error parsing file: ' + error.message);
+                    }
+                };
+                reader.onerror = (error) => reject('Error reading file: ' + error.message);
+                reader.readAsText(file);
+            } else {
+                reject('No file selected');
+            }
+        };
+
+        input.click();
+    });
 }

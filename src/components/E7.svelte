@@ -13,7 +13,9 @@
 		updateLastCombination,
 		deleteElement,
 		addServerResponse,
-		serverResponses
+		serverResponses,
+		saveServerResponsesToFile,
+		loadServerResponsesFromFile
 	} from '$lib/stores.js';
 	import {
 		generateCombination,
@@ -127,7 +129,10 @@
 			console.log('🚀 ~ combineElements ~ Generated new combination:', newElement);
 
 			let responseData = generationResults['data'];
-			console.log(`🚀 ~ combineElements ~ responseData:`, responseData);
+			console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
+			responseData.allResults.forEach((result) => {
+				console.log(`${result.model}\n --- ${smallerEl} + ${largerEl} = ${result.combination} `);
+			});
 			if (responseData) {
 				handleResponseApiLogs(responseData);
 			}
@@ -295,6 +300,14 @@
 			</div>
 			<div class="flex">
 				<div class="flex items-center space-x-4">
+					<div class="flex flex-col">
+						<button class="px-4 py-2 rounded bg-cyan-800" on:click={saveServerResponsesToFile}
+							>Save Server Responses</button
+						>
+						<button class="px-4 py-2 rounded bg-cyan-700" on:click={loadServerResponsesFromFile}
+							>Load Server Responses</button
+						>
+					</div>
 					<div class="flex flex-col">
 						<button
 							on:click={generateRandomCombinations(randomCombinationCount)}
