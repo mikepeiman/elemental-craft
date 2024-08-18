@@ -1,16 +1,17 @@
 <script>
 	import { onMount, tick } from 'svelte';
-	import { selectedModels, extendedModelNames, extendedModelNames2 } from '$lib/stores.js';
-	// import { clickOutside } from './clickOutside.js'; // We'll create this directive
+	import { selectedModels } from '$lib/stores.js';
+	import { extendedModelNames, extendedModelNames2 } from '$lib/stores.js';
 
 	let isOpen = false;
-	let selectAllExtended = false;
-	let selectAllExtended2 = false;
+	let selectAllModels = false;
 	let dropdownElement;
+	let uniqueModelNames = [];
+	$: uniqueModelNames = [...new Set([...extendedModelNames, ...extendedModelNames2])];
 
 	// Initialize with the first model selected
 	if ($selectedModels.length === 0) {
-		$selectedModels = [extendedModelNames[0]];
+		$selectedModels = [uniqueModelNames[0]];
 	}
 	$: console.log(`🚀 ~ $selectedModels:`, $selectedModels);
 
@@ -42,27 +43,17 @@
 		console.log('Selected models:', $selectedModels);
 	}
 
-	function toggleSelectAll(collection) {
-		if (collection === 'extended') {
-			selectAllExtended = !selectAllExtended;
-			if (selectAllExtended) {
-				$selectedModels = [...new Set([...$selectedModels, ...extendedModelNames])];
-			} else {
-				$selectedModels = $selectedModels.filter((model) => !extendedModelNames.includes(model));
-			}
-		} else if (collection === 'extended2') {
-			selectAllExtended2 = !selectAllExtended2;
-			if (selectAllExtended2) {
-				$selectedModels = [...new Set([...$selectedModels, ...extendedModelNames2])];
-			} else {
-				$selectedModels = $selectedModels.filter((model) => !extendedModelNames2.includes(model));
-			}
+	function toggleSelectAll() {
+		selectAllModels = !selectAllModels;
+		if (selectAllModels) {
+			$selectedModels = [...uniqueModelNames];
+		} else {
+			$selectedModels = [];
 		}
 	}
 
 	$: {
-		selectAllExtended = extendedModelNames.every((model) => $selectedModels.includes(model));
-		selectAllExtended2 = extendedModelNames2.every((model) => $selectedModels.includes(model));
+		selectAllModels = uniqueModelNames.every((model) => $selectedModels.includes(model));
 	}
 
 	onMount(() => {
@@ -105,38 +96,15 @@
 			aria-labelledby="options-menu"
 		>
 			<div class="py-1 relative z-10" role="none">
-				<div class="px-4 py-2 text-sm text-gray-700 font-semibold">Extended Models</div>
+				<div class="px-4 py-2 text-sm text-gray-700 font-semibold">All Models</div>
 				<button
-					on:click={() => toggleSelectAll('extended')}
+					on:click={toggleSelectAll}
 					class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left"
 					role="menuitem"
 				>
-					{selectAllExtended ? 'Deselect All' : 'Select All'} Extended Models
+					{selectAllModels ? 'Deselect All' : 'Select All'} Models
 				</button>
-				{#each extendedModelNames as model}
-					<label
-						class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
-					>
-						<input
-							type="checkbox"
-							bind:group={$selectedModels}
-							value={model}
-							class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
-						/>
-						<span class="ml-2">{model}</span>
-					</label>
-				{/each}
-			</div>
-			<div class="py-1" role="none">
-				<div class="px-4 py-2 text-sm text-gray-700 font-semibold">Additional Models</div>
-				<button
-					on:click={() => toggleSelectAll('extended2')}
-					class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left"
-					role="menuitem"
-				>
-					{selectAllExtended2 ? 'Deselect All' : 'Select All'} Additional Models
-				</button>
-				{#each extendedModelNames2 as model}
+				{#each uniqueModelNames as model}
 					<label
 						class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
 					>
