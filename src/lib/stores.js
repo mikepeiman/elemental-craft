@@ -60,13 +60,17 @@ function createPersistentStore(key, initialValue) {
 export const apiResponseStore = createPersistentStore('apiResponses', []);
 
 // Helper functions to interact with the store
-export function addApiResponse(response) {
+export function addApiResponse(model, response) {
     apiResponseStore.update(responses => {
-        const newResponse = {
-            timestamp: new Date().toISOString(),
-            data: response
-        };
-        return [newResponse, ...responses];
+        const timestamp = new Date().toISOString();
+
+        if (!responses[model]) {
+            responses[model] = {};
+        }
+
+        responses[model][timestamp] = response;
+
+        return responses;
     });
 }
 
