@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
-import { addServerResponse } from '$lib/stores.js'
+import { addApiResponse, addServerResponse } from '$lib/stores.js'
 
 dotenv.config();
 
@@ -8,27 +8,201 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const YOUR_SITE_URL = process.env.YOUR_SITE_URL;
 const YOUR_SITE_NAME = process.env.YOUR_SITE_NAME;
 
-const extendedModelNames = [
-    "meta-llama/llama-3.1-405b",
-    "perplexity/llama-3.1-sonar-large-128k-online",
+
+
+const effectiveModelNames = [
+    "mistralai/mistral-tiny",
     "perplexity/llama-3.1-sonar-small-128k-online",
+    "microsoft/wizardlm-2-8x22b",
+    "anthropic/claude-3-haiku",
+    "openai/gpt-4o-mini-2024-07-18",
+    "openai/gpt-3.5-turbo",
     "aetherwiing/mn-starcannon-12b",
-    "nvidia/nemotron-4-340b-instruct",
+    "meta-llama/llama-2-13b-chat",
+]
+const errorModels = [
     "liuhaotian/llava-yi-34b",
     "01-ai/yi-34b-200k",
+    "nvidia/nemotron-4-340b-instruct",
     "neversleep/noromaid-mixtral-8x7b-instruct",
-    "gryphe/mythomax-l2-13b",
-    "austism/chronos-hermes-13b",
-    "togethercomputer/stripedhyena-hessian-7b"
-];
-const modelNames = [
-    "openai/gpt-3.5-turbo",
+    "intel/neural-chat-7b",
+]
+
+const cheapModel = "openai/gpt-4o-mini-2024-07-18"
+
+const comparativeModel = "openai/chatgpt-4o-latest"
+
+const stupidModels = [
+    "togethercomputer/stripedhyena-hessian-7b",
+]
+
+const finalModel = "anthropic/claude-3.5-sonnet";
+
+const premiumModelNames = [
+    "meta-llama/llama-3.1-405b",
+    "openai/chatgpt-4o-latest",
     "anthropic/claude-2",
     "google/palm-2-chat-bison",
-    "meta-llama/llama-2-70b-chat",
-    "meta-llama/llama-2-13b-chat",
     "mistralai/mistral-7b-instruct"
 ];
+
+const rules = `
+        STRICT RULES:
+        1. Respond with ONLY 1 to 3 words. No exceptions.
+        2. Prefer single-word or two-word responses.
+        3. Use Title Case (capitalize first letter of each word).
+        4. Do not use any punctuation.
+        5. The result must be a noun if a single word, but could include an adverb if two or three words
+        6. Ensure a logical connection to both original elements.
+        7. Avoid portmanteau and novelty coined phrases when possible (opt for concrete things (even if fictional) with existing references)`
+
+const goodExamples = `
+"Earth + Wind = Dust
+Your response would be only: Dust"
+
+"Fire + Water = Steam
+Your response would be only: Steam"
+
+"Earth + Water = Plant
+Your response would be only: Plant"
+
+"Wind + Wind = Tornado
+Your response would be only: Tornado"
+
+"Fire + Fire = Volcano
+Your response would be only: Volcano"
+
+"Lava + Mountain = Volcano
+Your response would be only: Volcano"
+
+"Lake + Volcano = Island
+Your response would be only: Island"
+
+"Island + Plant = Tree
+Your response would be only: Tree"
+
+"Steam + Wood = Train
+Your response would be only: Train"
+
+"Ocean + Sea = Fish
+Your response would be only: Fish"
+
+"Fish + Geyser = Whale
+Your response would be only: Whale"
+
+"Rainbow + Whale = Unicorn
+Your response would be only: Unicorn"
+
+"Mermaid + Unicorn = Narwhal
+Your response would be only: Narwhal"
+
+"Narwhal + Shark = Whalshark
+Your response would be only: Whalshark"
+
+"Rice + Volcano = Pizza
+Your response would be only: Pizza"
+
+"Pizza + Plant = Tomato
+Your response would be only: Tomato"
+
+"Lake + Plant = Lily
+Your response would be only: Lily"
+
+"Lily + Wind = Flower
+Your response would be only: Flower"
+
+"Flower + Tomato = Salad
+Your response would be only: Salad"
+
+"Mist + Moon = Fog
+Your response would be only: Fog"
+
+"Parthenon + Seahorse = Poseidon
+Your response would be only: Poseidon"
+
+"Snow Queen + Surfboard = Snowboard
+Your response would be only: Snowboard"
+
+"Froggy + Mushroom = Toad
+Your response would be only: Toad"
+
+"Chest + Robbery = Treasure
+Your response would be only: Treasure"
+
+"Hurricane + Steam Ship = Titanic
+Your response would be only: Titanic"
+
+"Dinosaur + Steam Tank = Stegosaurus
+Your response would be only: Stegosaurus"
+
+"Fishbowl + Goldberg = Aquarium
+Your response would be only: Aquarium"
+
+"Gold + Lake = Pirate
+Your response would be only: Pirate"
+
+"Rain + Rainbow = Rainbow
+Your response would be only: Rainbow"
+
+"Apollo + Werehorse = Centaur
+Your response would be only: Centaur"
+
+"Dragon + Werewolf = Werewolf
+Your response would be only: Werewolf"
+
+"King + Leviathan = Poseidon
+Your response would be only: Poseidon"
+
+"Crocodile + Phoenix = Dragon
+Your response would be only: Dragon"
+
+"Continent + Valentine = Australia
+Your response would be only: Australia"
+
+"Electricity + Restaurant = Frankenstein
+Your response would be only: Frankenstein"
+
+"Ice + Wave = Iceberg
+Your response would be only: Iceberg"
+
+"Mushroom + Sun = Smile
+Your response would be only: Smile"
+
+"Night + Paris = Eiffel Tower
+Your response would be only: Eiffel Tower"
+
+"Island + Shogi = Chess
+Your response would be only: Chess"
+
+"Olympus + Sasquatch = Zeus
+Your response would be only: Zeus"
+
+"Cook + Mud = Pig
+Your response would be only: Pig"
+
+"Fire + Potato = Chip
+Your response would be only: Chip"
+
+"Forest + Paradise = Eden
+Your response would be only: Eden"
+
+"Eden + Sashimi = Adam
+Your response would be only: Adam"
+
+"Adam + Smoke = Eve
+Your response would be only: Eve"
+
+"Eden + Tree = Apple
+Your response would be only: Apple"
+
+"Apple + Planet = Earth
+Your response would be only: Earth"
+
+"Olympus + Surfer = Poseidon
+Your response would be only: Poseidon"
+
+"Sashimi + Titan = Kraken
+Your response would be only: Kraken"`
 
 // let selectedModel = "openai/gpt-3.5-turbo";
 
@@ -112,15 +286,19 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         }
 
         const data = await response.json();
-        console.log(`🚀 ~ generateCompletion ~ data:`, data); // Log the entire response
-
+        console.log(`🚀 ~ generateCompletion for an individual model\n ${modelName}\n  ~ data:`, data); // Log the entire response
+        addApiResponse(modelName, {
+            type: 'success',
+            response: data,
+            timestamp: new Date().toISOString()
+        })
 
         if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
             throw new Error('Unexpected API response structure');
         }
 
         let msg = data.choices[0].message.content.trim()
-        console.log(`🚀 ~ generateCompletion ~ msg:`, msg)
+        console.log(`🚀 ~ generateCompletion  for an individual model ${modelName}  ~ msg:`, msg)
         return msg
     } catch (error) {
         console.error('Error in generateCompletion:', error);
@@ -128,146 +306,287 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
     }
 }
 
+let results = [];
 
+// const prompt = `
+// You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
+
+// Combine "${element1}" and "${element2}" into a thing (a noun).
+// Consider also the inverse combination "${element2}" and "${element1}".
+
+// Your entire response should be just the new noun combination, nothing else. 
+// If response is two or three words, it can contain an adverb.
+// No articles like "a", "the".
+
+// Good examples of combinations and results:
+// ${goodExamples}
+
+// Pick the result that is most semantically logical and sound.
+// REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
+
+const responseFormatJson = `
+{
+"mostLogical": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostConcrete": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostCreative": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostRelevant": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostDescriptive": {
+  "result": "string",
+  "explanation": "string"
+},
+`
+
+const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
+
+    return `You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
+
+    Combine "${element1}" and "${element2}".
+    Consider also the inverse combination "${element2}" and "${element1}".
+        
+    You will respond in a strict format based on the guiding property: ${responseFormatJson} 
+    Each result-response should be just the new noun combination, nothing else. 
+    If response is two or three words, it can contain an adverb.
+    No articles like "a", "the".
+
+    Include an explanation in the "explanation" field of the response object.`
+}
+
+// const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
+
+// ${selectedModelApiResponse}
+
+// Rules for selection:
+// 1. The chosen combination must be 1 to 3 words only.
+// 2. It should be in Title Case (capitalize first letter of each word).
+// 3. It must not contain any punctuation.
+// 4. It must be a noun.
+// 5. It should have a clear logical connection to both "${element1}" and "${element2}".
+
+// Provide your response of 1-3 words in Capital Case with absolutely nothing else included.`;
+
+
+
+// const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}")
+
+// Here are the results of multiple models processing that combination:
+// ${jsonResponse}
+// After considering the preceding varied results, conduct a final evaluation that analyzes and categorizes the outputs. Structure the evaluation results in a JSON format as follows:
+// ${responseFormatJson}
+// limit reasons given to 50-100 words max
+// }`;
+
+let responseIsJson = true
+function extractJsonFromResponse(response) {
+    console.log(`🚀 ~ response:`, response);
+
+    // If response is already an object, return it
+    if (typeof response === 'object' && response !== null) {
+        return response;
+    }
+
+    // If response is a string, try to extract JSON from it
+    if (typeof response === 'string') {
+        const jsonStartIndex = response.indexOf('{');
+        let jsonEndIndex = response.lastIndexOf('}');
+
+        if (jsonStartIndex !== -1) {
+            let jsonSubstring = response.substring(jsonStartIndex);
+
+            // Count opening and closing braces
+            let openBraces = (jsonSubstring.match(/{/g) || []).length;
+            let closeBraces = (jsonSubstring.match(/}/g) || []).length;
+
+            // Add missing closing braces if necessary
+            while (openBraces > closeBraces) {
+                jsonSubstring += '}';
+                closeBraces++;
+            }
+
+            console.log(`🚀 ~ jsonSubstring:`, jsonSubstring);
+
+            try {
+                return JSON.parse(jsonSubstring);
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+                // If parsing still fails, try to fix common issues
+                jsonSubstring = jsonSubstring.replace(/,\s*}/g, '}'); // Remove trailing commas
+                try {
+                    return JSON.parse(jsonSubstring);
+                } catch (error) {
+                    console.error('Error parsing JSON after attempted fix:', error);
+                    // If parsing fails again, return the original response
+                    return response;
+                }
+            }
+        } else {
+            console.log('No valid JSON object found in the response string');
+            return response;
+        }
+    }
+
+    // If response is neither an object nor a string, return it as is
+    console.log('Response is neither an object nor a string');
+    responseIsJson = false
+    return response;
+}
+
+
+let selectedModelApiResponse = {}
+let jsonResponse
 export async function POST({ request }) {
     try {
-        const { element1, element2 } = await request.json();
+        const { element1, element2, modelName } = await request.json();
 
-        const prompt = `
-        You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
+        let prompt = singleModelMultiPrompt(element1, element2, responseFormatJson)
 
-        Combine "${element1}" and "${element2}" into a thing (a noun).
-        Consider also the inverse combination "${element2}" and "${element1}".
-        
-        STRICT RULES:
-        1. Respond with ONLY 1 to 3 words. No exceptions.
-        2. Prefer single-word or two-word responses.
-        3. Use Title Case (capitalize first letter of each word).
-        4. Do not use any punctuation.
-        5. The result must be a noun.
-        6. Ensure a logical connection to both original elements.
-        7. Avoid portmanteau and novelty coined phrases when possible (opt for things with existing references)
-        
-        Your entire response should be just the new noun combination, nothing else.
-        
-        Examples of good combinations:
-        - Water + Fire = Steam
-        - Earth + Wind = Dust
-        - Time + Sand = Hourglass
-        - Fire + Tree = Ash
-        - Ocean + Islands = Archipelago
-        - Samurai + Divorce = Ronin
-        
-        Examples of good responses:
-        SteamDust
-        Hourglass
-        Ash
-        Archipelago
-        Ronin
+        try {
+            selectedModelApiResponse = await generateCompletion(prompt, modelName, { max_tokens: 3000 });
+            // console.log(`🚀 ~ POST ~ result:`, selectedModelApiResponse)
+            if (selectedModelApiResponse !== null) {
+                results.push({ model: modelName, combination: selectedModelApiResponse, success: true, error: null });
+                console.log(`🚀 ~ POST ${modelName} ~ selectedModelApiResponse after generateCompletion:`, selectedModelApiResponse);
+                addApiResponse(modelName, selectedModelApiResponse)
+                jsonResponse = extractJsonFromResponse(selectedModelApiResponse)
+            } else {
+                throw new Error('Null selectedModelApiResponse returned from generateCompletion');
+            }
+        } catch (error) {
+            results.push({ model: modelName, combination: null, success: false, error: error.message });
+            console.error(`🚀 ~ POST ${modelName} ~ Failed to generate combination:`, error);
+        }
 
-        Pick the result that is most semantically logical and sound.
 
-        REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
 
-        let results = [];
-        for (let i = 0; i < extendedModelNames.length; i++) {
-            const selectedModel = extendedModelNames[i];
+        let finalComparativeResponse = {};
+
+        if (responseIsJson) {
             try {
-                const result = await generateCompletion(prompt, selectedModel);
-                if (result !== null) {
-                    results.push({ model: selectedModel, combination: result, success: true, error: null });
-                    console.log(`🚀 ~ POST ${selectedModel} ~ result:`, result);
-                } else {
-                    throw new Error('Null result returned from generateCompletion');
+                for (const [category, content] of Object.entries(jsonResponse)) {
+                    console.log(`🚀 ~ POST ~ content:`, content);
+                    console.log(`🚀 ~ POST ~ category:`, category);
+                    if (content && typeof content === 'object' && 'result' in content && 'explanation' in content) {
+                        finalComparativeResponse[category] = {
+                            result: content.result,
+                            explanation: content.explanation
+                        };
+                    } else {
+                        console.error(`Invalid content structure for category: ${category}`);
+                    }
                 }
             } catch (error) {
-                results.push({ model: selectedModel, combination: null, success: false, error: error.message });
-                console.error(`🚀 ~ POST ${selectedModel} ~ Failed to generate combination:`, error);
+                console.error('Error processing jsonResponse:', error);
+            }
+        } else {
+            console.error('Failed to parse jsonResponse into a valid JSON object');
+        }
+
+        console.log('Final Comparative Response:', finalComparativeResponse);
+        console.log(`finalComparativeResponse:`, finalComparativeResponse);
+
+
+        // const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${jsonResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
+
+
+
+        // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
+        // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
+
+        // reason = finalReason
+        let reason = "no reason given"
+
+        // Process finalComparativeResponse
+
+        // for (const category in finalComparativeResponse) {
+        //     finalComparativeResponse[category].result = formatResult(finalComparativeResponse[category].result);
+        // }
+
+
+        // 2. & 3. Add alternativeResults and assign best result
+        const alternativeResults = new Set();
+        let bestResult = '';
+        let highestScore = -1;
+
+        console.log(`finalComparativeResponse:`, finalComparativeResponse);
+        for (const category in finalComparativeResponse) {
+            const result = formatResult(finalComparativeResponse[category].result)
+            const explanation = finalComparativeResponse[category].explanation;
+            alternativeResults.add(result);
+            // Assuming 'mostLogical' is the best result, you can change this criteria
+            if (category === 'mostLogical') {
+                bestResult = result;
+                reason = explanation
             }
         }
 
-        console.log(`🚀 ~ generateCombinations ~ results:`, results);
-
-        // Final evaluation prompt
-        const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
-    
-        ${results.map(r => `${r.combination}`).join('\n')}
-    
-        Rules for selection:
-        1. The chosen combination must be 1 to 3 words only.
-        2. It should be in Title Case (capitalize first letter of each word).
-        3. It must not contain any punctuation.
-        4. It must be a noun.
-        5. It should have a clear logical connection to both "${element1}" and "${element2}".
-    
-        Provide your response of 1-3 words in Capital Case with absolutely nothing else included.`;
-
-        console.log(`🚀 ~ POST ~ evaluationPrompt:`, evaluationPrompt)
-
-        const finalModel = "anthropic/claude-3.5-sonnet:beta";
-        const finalResult = await generateCompletion(evaluationPrompt, finalModel);
-
-        const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${finalResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
-
-        const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
-        console.log(`🚀 ~ POST ~ finalResult:`, finalResult)
-        console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
+        const alternativeResultsArray = Array.from(alternativeResults);
+        const alternativeResultsString = alternativeResultsArray.join(', ');
 
 
-        let bestCombination = finalResult
-        // Process the bestCombination to extract the final term or phrase
-        if (bestCombination) {
-            // Split on '=' or ':' and take the last part
-            const parts = bestCombination.split(/[=:]/);
-            bestCombination = parts[parts.length - 1].trim();
+        const finalFinalPrompt = `
+            For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination; giving a logical and/or concrete answer; and the answer will provide the most semantic weight, commonality, and distinctive meaning to best facilitate further combinations.
 
-            // Remove any remaining punctuation and ensure proper capitalization
-            bestCombination = bestCombination
-                .replace(/[^\w\s-]/g, '')  // Remove any punctuation except hyphens
-                .split(/\s+/)  // Split into words
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())  // Capitalize each word
-                .join(' ');  // Join back into a string
-        }
+            ${alternativeResultsString}.
+            Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
+        `
+        // console.log(`🚀 ~ POST ~ finalFinalPrompt:`, finalFinalPrompt)
 
-        // If no valid best combination is found, select the first valid combination from the results
-        if (!bestCombination) {
-            const validCombination = results.find(r => {
-                const combination = r.combination.split(/[=:]/).pop().trim().replace(/[^\w\s-]/g, '');
-                return combination && combination.split(' ').length <= 3;
-            });
-            bestCombination = validCombination
-                ? validCombination.combination.split(/[=:]/).pop().trim().replace(/[^\w\s-]/g, '')
-                : 'No valid combination found';
-
-            // Ensure proper capitalization
-            bestCombination = bestCombination
-                .split(/\s+/)
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-
-            reason = "Fallback selection due to no valid best combination found.";
-        }
+        const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
+        console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
 
         // Create the new element object
         const newElement = {
-            content: finalResult,
-            reason: finalReason,
-            parents: [element1, element2]
+            name: finalFinalElement || bestResult,
+            finalComparativeResponse: finalComparativeResponse,
+            reason: reason,
+            parents: [element1, element2],
+            alternativeResults: Array.from(alternativeResults)
         };
 
         console.log(`🚀 ~ New element created:`, newElement);
 
-
         // Return a proper Response object
         return json({
-            allResults: results,
-            combinations: results,
-            bestCombination: bestCombination,
+            allResults: results || result,
             newElement: newElement
         });
     } catch (error) {
         console.error('Error in POST handler:', error);
         // Return a proper Response object even in case of an error
-        return json({ allResults: results, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
+        return json({ allResults: results || result, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
     }
+}
+
+function parseAndFormatResult(result) {
+    const parts = result.replace('+', ',').replace('=', ',').split(',');
+    // console.log(`🚀 ~ parseAndFormatResult ~ parts:`, parts)
+    const formattedResult = parts[parts.length - 1].trim();
+    // console.log(`🚀 ~ parseAndFormatResult ~ formattedResult:`, formattedResult)
+    return formattedResult.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function extractJSON(text) {
+    // console.log(`🚀 ~ extractJSON ~ text:`, text)
+    const match = text.match(/```json\n([\s\S]*?)\n```/);
+    // console.log(`🚀 ~ extractJSON ~ match:`, match)
+    return match ? match[1] : text;
+}
+
+function formatResult(result) {
+    const parts = result.split(/[+=]/);
+    return parts[parts.length - 1].trim()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
 }

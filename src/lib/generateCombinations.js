@@ -1,9 +1,17 @@
 // $lib/generateCombinations.js
 
 import { get } from 'svelte/store';
-import { elements, combinations, updateLastCombination, addServerResponse } from './stores.js';
+import { elements, combinations, updateLastCombination, addServerResponse } from '$lib/stores.js';
 
-
+function handleResponseApiLogs(el1, el2, responseData) {
+  console.log(`🚀 ~ handleResponseApiLogs FROM GENERATECOMBINATIONS.js ~ el1, el2, responseData:`, el1, el2, responseData);
+  if (responseData && responseData.allResults) {
+    responseData.allResults.forEach((result) => {
+      // addServerResponse(result.model, result.success, `${el1} + ${el2}: ${result.combination}`); // used this before I expanded element properties
+      addServerResponse(result.model, result.success, `${el1} + ${el2}: ${responseData.newElement.name} \n ${responseData.newElement.alternativeResults.join(', ')}`);
+    });
+  }
+}
 export async function generateCombination(element1, element2) {
   const key = [element1, element2].sort().join(',');
   const existingCombination = get(combinations)[key];
@@ -32,7 +40,9 @@ export async function generateCombination(element1, element2) {
       // });
       console.log(`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`, data);
 
-      const { content: newElementName, reason, parents } = data.newElement;
+      handleResponseApiLogs(element1, element2, data)
+
+      const { name: newElementName, reason, finalComparativeResponse, alternativeResults, parents } = data.newElement;
 
       if (typeof newElementName !== 'string' || newElementName.length === 0) {
         throw new Error('Invalid newElementName received from server');
@@ -45,6 +55,8 @@ export async function generateCombination(element1, element2) {
           return [...e, {
             id: Date.now(),
             content: newElementName,
+            alternativeResults: alternativeResults || [],
+            finalComparativeResponse: finalComparativeResponse || null,
             parents: parents || [element1, element2],
             reason: reason || null
           }];
@@ -110,12 +122,16 @@ export async function generateRandomCombinations(count) {
       console.log(`Combination already exists: ${smallerEl} + ${largerEl} = ${existingCombination}`);
       updateLastCombination(smallerEl, largerEl, existingCombination);
     } else {
-      const newCombination = await generateCombination(smallerEl, largerEl);
-      if (newCombination) {
+      const response = await generateCombination(smallerEl, largerEl);
+
+      const { newElementName } = response || {};
+      const { data } = response || {};
+
+      if (newElementName) {
         generatedCombinations++;
-        console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newCombination}`);
-        combinations.update(c => ({ ...c, [key]: newCombination }));
-        updateLastCombination(smallerEl, largerEl, newCombination);
+        console.log(`Generated new combination: ${smallerEl} + ${largerEl} = ${newElementName}`);
+        combinations.update(c => ({ ...c, [key]: newElementName }));
+        updateLastCombination(smallerEl, largerEl, newElementName);
       }
     }
 
