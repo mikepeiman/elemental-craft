@@ -39,6 +39,7 @@ export const extendedModelNames2 = [
     "meta-llama/llama-2-70b-chat", // pretty good
     "microsoft/wizardlm-2-8x22b", // pretty good
 ]
+
 function createPersistentStore(key, initialValue) {
     const storedValue = browser ? localStorage.getItem(key) : null;
     const store = writable(storedValue ? JSON.parse(storedValue) : initialValue);
@@ -53,6 +54,28 @@ function createPersistentStore(key, initialValue) {
         ...store,
         reset: () => store.set(initialValue)
     };
+}
+
+// Create the API response store
+export const apiResponseStore = createPersistentStore('apiResponses', []);
+
+// Helper functions to interact with the store
+export function addApiResponse(response) {
+    apiResponseStore.update(responses => {
+        const newResponse = {
+            timestamp: new Date().toISOString(),
+            data: response
+        };
+        return [newResponse, ...responses];
+    });
+}
+
+export function getApiResponses() {
+    return apiResponseStore;
+}
+
+export function clearApiResponses() {
+    apiResponseStore.reset();
 }
 
 export const elements = createPersistentStore('elements', [

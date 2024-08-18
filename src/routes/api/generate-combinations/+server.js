@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
-import { addServerResponse, extendedModelNames, extendedModelNames2 } from '$lib/stores.js'
+import { addApiResponse, addServerResponse } from '$lib/stores.js'
 
 dotenv.config();
 
@@ -287,7 +287,11 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
 
         const data = await response.json();
         console.log(`🚀 ~ generateCompletion for an individual model\n ${modelName}\n  ~ data:`, data); // Log the entire response
-
+        addApiResponse(modelName, {
+            type: 'success',
+            response: data,
+            timestamp: new Date().toISOString()
+        })
 
         if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
             throw new Error('Unexpected API response structure');
@@ -304,6 +308,23 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
 
 let results = [];
 
+function extractJsonFromResponse(response) {
+    const jsonStartIndex = response.indexOf('{');
+    if (jsonStartIndex === -1) {
+        throw new Error('No JSON object found in the response');
+    }
+
+    const jsonSubstring = response.substring(jsonStartIndex);
+
+    try {
+        return JSON.parse(jsonSubstring);
+    } catch (error) {
+        console.error('Error parsing JSON:', error);
+        throw new Error('Failed to parse JSON from the response');
+    }
+}
+
+let JsonResponse = {}
 export async function POST({ request }) {
     try {
         const { element1, element2, modelName } = await request.json();
@@ -386,15 +407,17 @@ export async function POST({ request }) {
             if (selectedModelApiResponse !== null) {
                 results.push({ model: modelName, combination: selectedModelApiResponse, success: true, error: null });
                 console.log(`🚀 ~ POST ${modelName} ~ selectedModelApiResponse after generateCompletion:`, selectedModelApiResponse);
-            } else {
-                throw new Error('Null selectedModelApiResponse returned from generateCompletion');
-            }
-        } catch (error) {
-            results.push({ model: modelName, combination: null, success: false, error: error.message });
-            console.error(`🚀 ~ POST ${modelName} ~ Failed to generate combination:`, error);
+                addApiResponse({ $apiResponses[modelName], response: selectedModelApiResponse }, timestamp: new Date().toISOString()})
+            JsonResponse = extractJsonFromResponse(selectedModelApiResponse)
+        } else {
+            throw new Error('Null selectedModelApiResponse returned from generateCompletion');
         }
+    } catch (error) {
+        results.push({ model: modelName, combination: null, success: false, error: error.message });
+        console.error(`🚀 ~ POST ${modelName} ~ Failed to generate combination:`, error);
+    }
 
-        const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
+    const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
     
         ${selectedModelApiResponse}
     
@@ -409,110 +432,104 @@ export async function POST({ request }) {
 
 
 
-        const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}")
+    const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}")
 
         Here are the results of multiple models processing that combination:
-        ${selectedModelApiResponse}
+        ${jsonResponse}
         After considering the preceding varied results, conduct a final evaluation that analyzes and categorizes the outputs. Structure the evaluation results in a JSON format as follows:
         ${responseFormatJson}
         limit reasons given to 50-100 words max
 }`;
 
+    let finalComparativeResponse = {};
+    let jsonResult = JSON.parse(jsonResponse);
+
+    for (const [category, content] of Object.entries(jsonResult)) {
+        console.log(`🚀 ~ POST ~ content:`, content)
+        console.log(`🚀 ~ POST ~ category:`, category)
+        finalComparativeResponse[category] = {
+            result: content.result,
+            explanation: content.explanation
+        };
+    }
+    console.log(`finalComparativeResponse:`, finalComparativeResponse);
 
 
-        let finalComparativeResponse = {};
+    const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${jsonResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
 
 
 
-        // console.log(`\n\n@@@@@@@@@@@@@@@@@@@@@@ selectedModelApiResponse  ${selectedModelApiResponse } and\n\n typeof ${typeof selectedModelApiResponse }\n\n`);
-        selectedModelApiResponse = JSON.parse(selectedModelApiResponse);
-        // console.log(`\n\n@@@@@@@@@@@@@@@@@@@@@@ PARSED selectedModelApiResponse  ${selectedModelApiResponse } and\n\n typeof PARSED ${typeof selectedModelApiResponse }\n\n`);
-        for (const [category, content] of Object.entries(selectedModelApiResponse)) {
-            console.log(`🚀 ~ POST ~ content:`, content)
-            console.log(`🚀 ~ POST ~ category:`, category)
-            finalComparativeResponse[category] = {
-                result: content.result,
-                explanation: content.explanation
-            };
+    // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
+    // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
+
+    // reason = finalReason
+    let reason = "no reason given"
+
+    // Process finalComparativeResponse
+
+    // for (const category in finalComparativeResponse) {
+    //     finalComparativeResponse[category].result = formatResult(finalComparativeResponse[category].result);
+    // }
+
+
+    // 2. & 3. Add alternativeResults and assign best result
+    const alternativeResults = new Set();
+    let bestResult = '';
+    let highestScore = -1;
+
+    console.log(`finalComparativeResponse:`, finalComparativeResponse);
+    for (const category in finalComparativeResponse) {
+        const result = formatResult(finalComparativeResponse[category].result)
+        const explanation = finalComparativeResponse[category].explanation;
+        alternativeResults.add(result);
+        // Assuming 'mostLogical' is the best result, you can change this criteria
+        if (category === 'mostLogical') {
+            bestResult = result;
+            reason = explanation
         }
-        console.log(`finalComparativeResponse:`, finalComparativeResponse);
+    }
 
 
-        const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${selectedModelApiResponse}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
+    if (jsonResult.length > 0) {
+        console.log(`🚀 ~ POST ~ jsonResult:`, jsonResult)
+
+    }
+    const alternativeResultsArray = Array.from(alternativeResults);
+    const alternativeResultsString = alternativeResultsArray.join(', ');
 
 
-
-        // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
-        // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
-
-        // reason = finalReason
-        let reason = "no reason given"
-
-        // Process finalComparativeResponse
-
-        // for (const category in finalComparativeResponse) {
-        //     finalComparativeResponse[category].result = formatResult(finalComparativeResponse[category].result);
-        // }
-
-
-        // 2. & 3. Add alternativeResults and assign best result
-        const alternativeResults = new Set();
-        let bestResult = '';
-        let highestScore = -1;
-
-        console.log(`finalComparativeResponse:`, finalComparativeResponse);
-        for (const category in finalComparativeResponse) {
-            const result = formatResult(finalComparativeResponse[category].result)
-            const explanation = finalComparativeResponse[category].explanation;
-            alternativeResults.add(result);
-            // Assuming 'mostLogical' is the best result, you can change this criteria
-            if (category === 'mostLogical') {
-                bestResult = result;
-                reason = explanation
-            }
-        }
-
-
-        if (selectedModelApiResponse.length > 0) {
-            console.log(`🚀 ~ POST ~ selectedModelApiResponse:`, selectedModelApiResponse)
-
-        }
-        const alternativeResultsArray = Array.from(alternativeResults);
-        const alternativeResultsString = alternativeResultsArray.join(', ');
-
-
-        const finalFinalPrompt = `
+    const finalFinalPrompt = `
             For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination; giving a logical and/or concrete answer; and the answer will provide the most semantic weight, commonality, and distinctive meaning to best facilitate further combinations.
 
             ${alternativeResultsString}.
             Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
         `
-        // console.log(`🚀 ~ POST ~ finalFinalPrompt:`, finalFinalPrompt)
+    // console.log(`🚀 ~ POST ~ finalFinalPrompt:`, finalFinalPrompt)
 
-        const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
-        console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
+    const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
+    console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
 
-        // Create the new element object
-        const newElement = {
-            name: finalFinalElement || bestResult,
-            finalComparativeResponse: finalComparativeResponse,
-            reason: reason,
-            parents: [element1, element2],
-            alternativeResults: Array.from(alternativeResults)
-        };
+    // Create the new element object
+    const newElement = {
+        name: finalFinalElement || bestResult,
+        finalComparativeResponse: finalComparativeResponse,
+        reason: reason,
+        parents: [element1, element2],
+        alternativeResults: Array.from(alternativeResults)
+    };
 
-        console.log(`🚀 ~ New element created:`, newElement);
+    console.log(`🚀 ~ New element created:`, newElement);
 
-        // Return a proper Response object
-        return json({
-            allResults: results || result,
-            newElement: newElement
-        });
-    } catch (error) {
-        console.error('Error in POST handler:', error);
-        // Return a proper Response object even in case of an error
-        return json({ allResults: results || result, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
-    }
+    // Return a proper Response object
+    return json({
+        allResults: results || result,
+        newElement: newElement
+    });
+} catch (error) {
+    console.error('Error in POST handler:', error);
+    // Return a proper Response object even in case of an error
+    return json({ allResults: results || result, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
+}
 }
 
 function parseAndFormatResult(result) {

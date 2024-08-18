@@ -14,6 +14,9 @@
 		updateLastCombination,
 		deleteElement,
 		addServerResponse,
+		addApiResponse,
+		apiResponseStore,
+		getApiResponses,
 		serverResponses,
 		saveServerResponsesToFile,
 		loadServerResponsesFromFile,
@@ -21,6 +24,8 @@
 		selectedModels,
 		combinationStore
 	} from '$lib/stores.js';
+	$: console.log(`🚀 ~ getApiResponses:`, getApiResponses());
+	$: console.log(`🚀 ~ apiResponseStore:`, $apiResponseStore);
 	$: console.log(`🚀 ~ combinationStore:`, $combinationStore);
 	$: console.log(`🚀 ~ selectedModels in E7:`, $selectedModels);
 
@@ -47,10 +52,6 @@
 		initializeNextId($dragElements);
 		console.log('🚀 ~ onMount ~ Component mounted');
 	});
-
-	// $lib/generateCombinations.js
-
-	// import { elements, combinations, updateLastCombination, addServerResponse } from '$lib/stores.js';
 
 	function handleResponseApiLogs(el1, el2, responseData) {
 		console.log(
