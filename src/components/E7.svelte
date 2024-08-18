@@ -497,11 +497,11 @@
 <!-- Rest of your component remains the same -->
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="flex h-full w-screen bg-gray-900 text-gray-200">
+<div class="flex h-full w-screen bg-gray-900 text-gray-200 overflow-y-hidden">
 	<!-- Left Sidebar -->
 	<div class="w-1/4 p-4 border-r border-gray-700 overflow-y-auto">
 		<h2 class="text-2xl font-semibold mb-4">Elements</h2>
-		<div class="flex flex-wrap gap-2">
+		<div class="flex flex-wrap gap-2 overflow-y-scroll">
 			{#each $elements as item (item.id)}
 				<div
 					draggable="true"
@@ -525,7 +525,10 @@
 					Last Combination: {$lastCombination.element1} + {$lastCombination.element2} = {$lastCombination.result}
 				</div>
 			</div>
-			<ModelSelector />
+			<div class="flex flex-col max-w-[24rem] w-full">
+				<ModelSelector />
+				<div class=" line-clamp-3">{$selectedModels}</div>
+			</div>
 			<div class="flex">
 				<div class="flex items-center space-x-4">
 					<div class="flex flex-col">
