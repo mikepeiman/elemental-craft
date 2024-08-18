@@ -1,7 +1,7 @@
 // $lib/generateCombinations.js
 
 import { get } from 'svelte/store';
-import { elements, combinations, updateLastCombination, addServerResponse } from './stores.js';
+import { elements, combinations, updateLastCombination, addServerResponse } from '$lib/stores.js';
 
 function handleResponseApiLogs(el1, el2, responseData) {
   console.log(`🚀 ~ handleResponseApiLogs FROM GENERATECOMBINATIONS.js ~ el1, el2, responseData:`, el1, el2, responseData);

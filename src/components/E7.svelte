@@ -71,13 +71,81 @@
 		}
 	}
 
+	async function combineElements(element1, element2, x, y) {
+		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
+
+		if (!element1 || !element2) {
+			console.log(
+				'🚀 ~ combineElements ~ One or both elements are undefined, aborting combination'
+			);
+			return;
+		}
+
+		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
+		console.log(`🚀 ~ combineElements ~ smallerEl, largerEl:`, smallerEl, largerEl);
+
+		let newElement;
+		let responseData;
+
+		try {
+			let storedCombination = combinationStore.getCombination(smallerEl, largerEl);
+
+			if (storedCombination) {
+				newElement = storedCombination.newElementName;
+				responseData = storedCombination.data;
+				console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
+			} else {
+				let generationResults = await generateCombination(smallerEl, largerEl);
+				console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
+
+				if (!generationResults) {
+					console.error('Generation failed to produce results');
+					return;
+				}
+
+				if (!generationResults.newElementName) {
+					console.error('Generation results do not contain newElementName');
+					return;
+				}
+
+				newElement = generationResults.newElementName;
+				responseData = generationResults.data;
+
+				combinationStore.setCombination(smallerEl, largerEl, generationResults);
+
+				console.log(`🚀 ~ combineElements ~ newElement:`, newElement);
+				console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
+			}
+
+			if (newElement) {
+				console.log('🚀 ~ combineElements ~ Creating new combined element');
+
+				removeDragElement(element1.id);
+				removeDragElement(element2.id);
+				addDragElement({
+					content: newElement,
+					x,
+					y,
+					isNew: true,
+					parents: [element1.content, element2.content]
+				});
+
+				updateLastCombination(smallerEl, largerEl, newElement);
+			} else {
+				console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
+			}
+		} catch (error) {
+			console.error('Error in combineElements:', error);
+		}
+	}
+
 	async function generateCombination(element1, element2) {
 		const key = [element1, element2].sort().join(',');
 		const existingCombination = get(combinations)[key];
 
 		if (existingCombination) {
 			updateLastCombination(element1, element2, existingCombination);
-			return existingCombination;
+			return { newElementName: existingCombination, data: null }; // Return in the expected format
 		}
 
 		let returnObject = null;
@@ -99,8 +167,27 @@
 						`🚀 ~ generateCombination ~ data: ALL RESULTS for \n\n ***************${element1} + ${element2}  ***************** \n\n`,
 						data
 					);
-
+					if (data && data.allResults) {
+						data.allResults.forEach((result) => {
+							console.log(
+								`%c${result.model}\n --- %c${element1} + ${element2} = ${data.newElement.name}`,
+								'font-size: .75rem; color: black;',
+								'font-size: 1.25rem; color: blue;'
+							);
+						});
+					} else {
+						console.log('No allResults found in responseData');
+					}
 					handleResponseApiLogs(element1, element2, data);
+
+					if (
+						!data.newElement ||
+						typeof data.newElement.name !== 'string' ||
+						data.newElement.name.length === 0
+					) {
+						console.error('Invalid newElementName received from server:', data.newElement);
+						continue; // Skip to next model if this one failed
+					}
 
 					const {
 						name: newElementName,
@@ -109,10 +196,6 @@
 						alternativeResults,
 						parents
 					} = data.newElement;
-
-					if (typeof newElementName !== 'string' || newElementName.length === 0) {
-						throw new Error('Invalid newElementName received from server');
-					}
 
 					// Update stores
 					combinations.update((c) => ({ ...c, [key]: newElementName }));
@@ -130,7 +213,6 @@
 								}
 							];
 						}
-						console.log(`🚀 ~ combination return elements.update ~ e:`, e);
 						return e;
 					});
 
@@ -144,7 +226,7 @@
 					console.log(`🚀 ~ generateCombination ~ returnObject:`, returnObject);
 					updateLastCombination(element1, element2, newElementName);
 				} else {
-					throw new Error(`Server responded with status: ${response.status}`);
+					console.error(`Server responded with status: ${response.status}`);
 				}
 			} catch (error) {
 				console.error('Error generating combination:', error);
@@ -152,12 +234,14 @@
 			}
 		}
 
-		return returnObject;
+		if (!returnObject) {
+			console.error('Failed to generate combination for all models');
+		}
+
+		return returnObject; // This might be null if all models failed
 	}
 
-	let shouldStopGeneration = false;
-
-	export async function generateRandomCombinations(count) {
+	async function generateRandomCombinations(count) {
 		let shouldStopGeneration = false;
 		let generatedCombinations = 0;
 		let attempts = 0;
@@ -218,7 +302,7 @@
 		shouldStopGeneration = false;
 	}
 
-	export function stopRandomGeneration() {
+	function stopRandomGeneration() {
 		shouldStopGeneration = true;
 	}
 
@@ -287,87 +371,6 @@
 			console.log('🚀 ~ handleNeoDragEnd ~ No overlapping pair found');
 		}
 		overlappingPair = null;
-	}
-
-	async function combineElements(element1, element2, x, y) {
-		console.log(`🚀 ~ combineElements ~ element1, element2, x, y:`, element1, element2, x, y);
-
-		// Check if both elements are defined
-		if (!element1 || !element2) {
-			console.log(
-				'🚀 ~ combineElements ~ One or both elements are undefined, aborting combination'
-			);
-			return;
-		}
-
-		// Sort elements to ensure consistent key creation
-		const [smallerEl, largerEl] = [element1.content, element2.content].sort();
-		console.log(`🚀 ~ combineElements ~ smallerEl, largerEl:`, smallerEl, largerEl);
-
-		let newElement;
-		let responseData;
-
-		try {
-			// Try to get existing combination from the store
-			let storedCombination = combinationStore.getCombination(smallerEl, largerEl);
-
-			if (storedCombination) {
-				// If combination exists in store, use it
-				newElement = storedCombination.newElementName;
-				responseData = storedCombination.data;
-				console.log('🚀 ~ combineElements ~ Using existing combination:', newElement);
-			} else {
-				// If not in store, generate new combination
-				let generationResults = await generateCombination(smallerEl, largerEl);
-				console.log(`🚀 ~ combineElements ~ generationResults:`, generationResults);
-
-				if (generationResults && generationResults.newElementName) {
-					newElement = generationResults.newElementName;
-					responseData = generationResults.data;
-
-					// Store the new combination
-					combinationStore.setCombination(smallerEl, largerEl, generationResults);
-
-					console.log(`🚀 ~ combineElements ~ newElement:`, newElement);
-					console.log(`🚀 ~ combineElements ~ responseData:\n\n`, responseData);
-
-					// Log each result
-					responseData.allResults.forEach((result) => {
-						console.log(
-							`%c${result.model}\n --- %c${smallerEl} + ${largerEl} = ${result.combination}`,
-							'font-size: .75rem; color: black;',
-							'font-size: 1.25rem; color: blue;'
-						);
-					});
-				} else {
-					console.error('Generation results or newElementName is undefined');
-					return null;
-				}
-			}
-
-			if (newElement) {
-				console.log('🚀 ~ combineElements ~ Creating new combined element');
-
-				// Remove old elements and add new element
-				removeDragElement(element1.id);
-				removeDragElement(element2.id);
-				addDragElement({
-					content: newElement,
-					x,
-					y,
-					isNew: true,
-					parents: [element1.content, element2.content]
-				});
-
-				// Update last combination (assuming this function exists and needs to be called)
-				updateLastCombination(smallerEl, largerEl, newElement);
-			} else {
-				console.log('🚀 ~ combineElements ~ Combination failed, no new element created');
-			}
-		} catch (error) {
-			console.error('Error in combineElements:', error);
-			return null;
-		}
 	}
 
 	function logServerResponses() {
