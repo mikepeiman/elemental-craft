@@ -8,11 +8,6 @@
 	let dropdownElement;
 	let uniqueModelNames = [];
 	$: uniqueModelNames = [...new Set([...extendedModelNames, ...extendedModelNames2])];
-
-	// Initialize with the first model selected
-	if ($selectedModels.length === 0) {
-		$selectedModels = [uniqueModelNames[0]];
-	}
 	$: console.log(`🚀 ~ $selectedModels:`, $selectedModels);
 
 	function clickOutside(node) {
@@ -57,6 +52,9 @@
 	}
 
 	onMount(() => {
+		if (!$selectedModels[0]) {
+			selectedModels.set([uniqueModelNames[0]]);
+		}
 		updateModels();
 	});
 </script>

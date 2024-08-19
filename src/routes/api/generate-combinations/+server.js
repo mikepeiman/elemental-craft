@@ -1,210 +1,14 @@
 import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
 import { addApiResponse, addServerResponse } from '$lib/stores.js'
+import { jsonrepair } from 'jsonrepair'
 
 dotenv.config();
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const YOUR_SITE_URL = process.env.YOUR_SITE_URL;
 const YOUR_SITE_NAME = process.env.YOUR_SITE_NAME;
-
-
-
-const effectiveModelNames = [
-    "mistralai/mistral-tiny",
-    "perplexity/llama-3.1-sonar-small-128k-online",
-    "microsoft/wizardlm-2-8x22b",
-    "anthropic/claude-3-haiku",
-    "openai/gpt-4o-mini-2024-07-18",
-    "openai/gpt-3.5-turbo",
-    "aetherwiing/mn-starcannon-12b",
-    "meta-llama/llama-2-13b-chat",
-]
-const errorModels = [
-    "liuhaotian/llava-yi-34b",
-    "01-ai/yi-34b-200k",
-    "nvidia/nemotron-4-340b-instruct",
-    "neversleep/noromaid-mixtral-8x7b-instruct",
-    "intel/neural-chat-7b",
-]
-
-const cheapModel = "openai/gpt-4o-mini-2024-07-18"
-
 const comparativeModel = "openai/chatgpt-4o-latest"
-
-const stupidModels = [
-    "togethercomputer/stripedhyena-hessian-7b",
-]
-
-const finalModel = "anthropic/claude-3.5-sonnet";
-
-const premiumModelNames = [
-    "meta-llama/llama-3.1-405b",
-    "openai/chatgpt-4o-latest",
-    "anthropic/claude-2",
-    "google/palm-2-chat-bison",
-    "mistralai/mistral-7b-instruct"
-];
-
-const rules = `
-        STRICT RULES:
-        1. Respond with ONLY 1 to 3 words. No exceptions.
-        2. Prefer single-word or two-word responses.
-        3. Use Title Case (capitalize first letter of each word).
-        4. Do not use any punctuation.
-        5. The result must be a noun if a single word, but could include an adverb if two or three words
-        6. Ensure a logical connection to both original elements.
-        7. Avoid portmanteau and novelty coined phrases when possible (opt for concrete things (even if fictional) with existing references)`
-
-const goodExamples = `
-"Earth + Wind = Dust
-Your response would be only: Dust"
-
-"Fire + Water = Steam
-Your response would be only: Steam"
-
-"Earth + Water = Plant
-Your response would be only: Plant"
-
-"Wind + Wind = Tornado
-Your response would be only: Tornado"
-
-"Fire + Fire = Volcano
-Your response would be only: Volcano"
-
-"Lava + Mountain = Volcano
-Your response would be only: Volcano"
-
-"Lake + Volcano = Island
-Your response would be only: Island"
-
-"Island + Plant = Tree
-Your response would be only: Tree"
-
-"Steam + Wood = Train
-Your response would be only: Train"
-
-"Ocean + Sea = Fish
-Your response would be only: Fish"
-
-"Fish + Geyser = Whale
-Your response would be only: Whale"
-
-"Rainbow + Whale = Unicorn
-Your response would be only: Unicorn"
-
-"Mermaid + Unicorn = Narwhal
-Your response would be only: Narwhal"
-
-"Narwhal + Shark = Whalshark
-Your response would be only: Whalshark"
-
-"Rice + Volcano = Pizza
-Your response would be only: Pizza"
-
-"Pizza + Plant = Tomato
-Your response would be only: Tomato"
-
-"Lake + Plant = Lily
-Your response would be only: Lily"
-
-"Lily + Wind = Flower
-Your response would be only: Flower"
-
-"Flower + Tomato = Salad
-Your response would be only: Salad"
-
-"Mist + Moon = Fog
-Your response would be only: Fog"
-
-"Parthenon + Seahorse = Poseidon
-Your response would be only: Poseidon"
-
-"Snow Queen + Surfboard = Snowboard
-Your response would be only: Snowboard"
-
-"Froggy + Mushroom = Toad
-Your response would be only: Toad"
-
-"Chest + Robbery = Treasure
-Your response would be only: Treasure"
-
-"Hurricane + Steam Ship = Titanic
-Your response would be only: Titanic"
-
-"Dinosaur + Steam Tank = Stegosaurus
-Your response would be only: Stegosaurus"
-
-"Fishbowl + Goldberg = Aquarium
-Your response would be only: Aquarium"
-
-"Gold + Lake = Pirate
-Your response would be only: Pirate"
-
-"Rain + Rainbow = Rainbow
-Your response would be only: Rainbow"
-
-"Apollo + Werehorse = Centaur
-Your response would be only: Centaur"
-
-"Dragon + Werewolf = Werewolf
-Your response would be only: Werewolf"
-
-"King + Leviathan = Poseidon
-Your response would be only: Poseidon"
-
-"Crocodile + Phoenix = Dragon
-Your response would be only: Dragon"
-
-"Continent + Valentine = Australia
-Your response would be only: Australia"
-
-"Electricity + Restaurant = Frankenstein
-Your response would be only: Frankenstein"
-
-"Ice + Wave = Iceberg
-Your response would be only: Iceberg"
-
-"Mushroom + Sun = Smile
-Your response would be only: Smile"
-
-"Night + Paris = Eiffel Tower
-Your response would be only: Eiffel Tower"
-
-"Island + Shogi = Chess
-Your response would be only: Chess"
-
-"Olympus + Sasquatch = Zeus
-Your response would be only: Zeus"
-
-"Cook + Mud = Pig
-Your response would be only: Pig"
-
-"Fire + Potato = Chip
-Your response would be only: Chip"
-
-"Forest + Paradise = Eden
-Your response would be only: Eden"
-
-"Eden + Sashimi = Adam
-Your response would be only: Adam"
-
-"Adam + Smoke = Eve
-Your response would be only: Eve"
-
-"Eden + Tree = Apple
-Your response would be only: Apple"
-
-"Apple + Planet = Earth
-Your response would be only: Earth"
-
-"Olympus + Surfer = Poseidon
-Your response would be only: Poseidon"
-
-"Sashimi + Titan = Kraken
-Your response would be only: Kraken"`
-
-// let selectedModel = "openai/gpt-3.5-turbo";
 
 const defaultParams = {
     // temperature: 0.0 to 2.0 (Default: 1.0) - Higher values increase randomness
@@ -286,7 +90,7 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         }
 
         const data = await response.json();
-        console.log(`🚀 ~ generateCompletion for an individual model\n ${modelName}\n  ~ data:`, data); // Log the entire response
+        // console.log(`🚀 ~ generateCompletion for an individual model\n ${modelName}\n  ~ data:`, data); // Log the entire response
         addApiResponse(modelName, {
             type: 'success',
             response: data,
@@ -298,7 +102,7 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
         }
 
         let msg = data.choices[0].message.content.trim()
-        console.log(`🚀 ~ generateCompletion  for an individual model ${modelName}  ~ msg:`, msg)
+        // console.log(`🚀 ~ generateCompletion  for an individual model ${modelName}  ~ msg:`, msg)
         return msg
     } catch (error) {
         console.error('Error in generateCompletion:', error);
@@ -332,25 +136,77 @@ const responseFormatJson = `
 },
 `
 
-const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
+function generateDescriptorsAndCombinations() {
+    const descriptors = [
+        'concrete',
+        'logical',
+        'relevant',
+        'meaningful',
+        'poetic',
+        'creative',
+        'popular culture',
+        'traditional'
+    ];
 
-    return `You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing) - but you aim to produce unexpected results that make intuitive sense to humans based on metaphoric, poetic, and cultural references.
+    const result = {};
 
-    Combine "${element1}" and "${element2}".
-    Consider also the inverse combination "${element2}" and "${element1}".
-        
-    You will respond in a strict format based on the guiding property: ${responseFormatJson} 
-    Each result-response should be just the new noun combination, nothing else. 
-    If response is two or three words, it can contain an adverb.
-    No articles like "a", "the".
+    // Add individual descriptors
+    descriptors.forEach(descriptor => {
+        result[descriptor] = {
+            result: "",
+            explanation: ""
+        };
+    });
 
-    Include an explanation in the "explanation" field of the response object.`
+    // Generate combinations
+    for (let i = 0; i < descriptors.length; i++) {
+        for (let j = i + 1; j < descriptors.length; j++) {
+            const combination = `${descriptors[i]} + ${descriptors[j]}`;
+            result[combination] = {
+                result: "",
+                explanation: ""
+            };
+        }
+    }
+
+    return result;
 }
 
-let responseIsJson = true
-let isStructuredJson = false;
+// Generate and log the result
+const descriptorsAndCombinations = generateDescriptorsAndCombinations();
+console.log(JSON.stringify(descriptorsAndCombinations, null, 2));
+
+const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
+
+    return `You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
+    Do your best to produce unexpected results that make intuitive sense to humans based on metaphoric, poetic, and cultural references.
+    Always err on the side of real things and real references rather than portmanteaus and made-up words or phrases.
+    We want the resulting item to be a real thing that itself possesses enough semantic depth to yield further meaningful combinations and results.
+
+    Combine "${element1}" and "${element2}".
+    
+    You will provide answers guided by this list of descriptors, and their combinations:         
+        'concrete',
+        'logical',
+        'relevant',
+        'meaningful',
+        'poetic',
+        'creative',
+        'popular culture',
+        'traditional'.
+        
+    Respond in a strict format based on the guiding property: ${descriptorsAndCombinations} 
+    Note the qualitative selections in the response object which each possess the same two properties.
+
+    Each result should be only the 1-3 word new combination string in the "result": "string" property,
+    and an explanation in the "explanation": "string" property 
+ `
+}
+
+let responseIsJson = false
+let isStructuredJson = true;
 function extractJsonFromResponse(response) {
-    console.log(`🚀 ~ response:`, response);
+    // console.log(`🚀 ~ response:`, response);
 
     let parsedResponse = response;
     let responseIsJson = false;
@@ -358,20 +214,27 @@ function extractJsonFromResponse(response) {
     if (typeof response === 'object' && response !== null) {
         parsedResponse = response;
         responseIsJson = true;
-        isStructuredJson = true;
+        // isStructuredJson = true;
     } else if (typeof response === 'string') {
         const jsonStartIndex = response.indexOf('{');
         const jsonEndIndex = response.lastIndexOf('}');
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
             let jsonSubstring = response.substring(jsonStartIndex, jsonEndIndex + 1);
+            console.log(`🚀 ~ \n\nextractJsonFromResponse ~ jsonSubstring:\n\n`, jsonSubstring)
+            let repairedResponse = jsonrepair(jsonSubstring);
+            console.log(`🚀 ~ JSONREPAIRED extractJsonFromResponse ~ \n\n TYPEOF  ${typeof repairedResponse}:\n\n`, repairedResponse)
 
             try {
-                parsedResponse = JSON.parse(jsonSubstring);
+                // parsedResponse = JSON.parse(jsonSubstring);
+                // console.log(`🚀 ~ extractJsonFromResponse ~ \n\nparsedResponse NONREPAIRED ATTEMPT TYPEOF ${parsedResponse} :\n\n`, parsedResponse)
+                parsedResponse = JSON.parse(repairedResponse);
+                console.log(`🚀 ~ extractJsonFromResponse ~ \n\n parsedResponse REPAIRED ATTEMPT TYPEOF ${typeof parsedResponse}:\n\n`, parsedResponse)
                 responseIsJson = true;
 
-                isStructuredJson = Object.values(parsedResponse).every(value =>
-                    typeof value === 'object' && 'result' in value && 'explanation' in value
-                );
+                // isStructuredJson = Object.values(parsedResponse).every(value => {
+                //     console.log(`🚀 ~ extractJsonFromResponse ~ value:`, value)
+                //     return typeof value === 'object' && 'result' in value && 'explanation' in value
+                // })
             } catch (error) {
                 console.error('Error parsing JSON:', error);
                 // If parsing fails, try to fix common issues
@@ -380,9 +243,9 @@ function extractJsonFromResponse(response) {
                     parsedResponse = JSON.parse(jsonSubstring);
                     responseIsJson = true;
 
-                    isStructuredJson = Object.values(parsedResponse).every(value =>
-                        typeof value === 'object' && 'result' in value && 'explanation' in value
-                    );
+                    // isStructuredJson = Object.values(parsedResponse).every(value =>
+                    //     typeof value === 'object' && 'result' in value && 'explanation' in value
+                    // );
                 } catch (error) {
                     console.error('Error parsing JSON after attempted fix:', error);
                     // If parsing fails again, leave parsedResponse as the original string
@@ -413,13 +276,19 @@ export async function POST({ request }) {
             selectedModelApiResponse = await generateCompletion(prompt, modelName, { max_tokens: 3000 });
             if (selectedModelApiResponse !== null) {
                 results.push({ model: modelName, combination: selectedModelApiResponse, success: true, error: null });
-                console.log(`🚀 ~ POST ${modelName} ~ selectedModelApiResponse after generateCompletion:`, selectedModelApiResponse);
+                console.log(`🚀 ~\n\n POST ${modelName} ~ \n\nselectedModelApiResponse after generateCompletion:\n\n`, selectedModelApiResponse);
                 addApiResponse(modelName, selectedModelApiResponse)
                 const { parsedResponse, responseIsJson, isStructuredJson } = extractJsonFromResponse(selectedModelApiResponse);
+                console.log(`🚀 ~ POST ~ parsedResponse, responseIsJson, isStructuredJson:`, parsedResponse, responseIsJson, isStructuredJson)
 
                 if (responseIsJson && isStructuredJson) {
                     jsonResponse = parsedResponse;
-                    for (const [category, content] of Object.entries(jsonResponse)) {
+                    let entries = Object.entries(jsonResponse)
+                    let keys = Object.keys(jsonResponse)
+                    console.log(`🚀 ~ POST ~ keys:`, keys)
+                    console.log(`🚀 ~ POST ~ entries:`, entries)
+                    for (const [category, content] of entries) {
+                        console.log(`🚀 ~ POST ~ category, content:`, category, content)
                         finalComparativeResponse[category] = {
                             result: content.result,
                             explanation: content.explanation
@@ -438,29 +307,6 @@ export async function POST({ request }) {
         } catch (error) {
             results.push({ model: modelName, combination: null, success: false, error: error.message });
             console.error(`🚀 ~ POST ${modelName} ~ Failed to generate combination:`, error);
-        }
-
-
-
-        if (responseIsJson && isStructuredJson) {
-            try {
-                for (const [category, content] of Object.entries(jsonResponse)) {
-                    finalComparativeResponse[category] = {
-                        result: content.result,
-                        explanation: content.explanation
-                    };
-                }
-            } catch (error) {
-                console.error('Error processing jsonResponse:', error);
-            }
-        } else if (responseIsJson) {
-            console.error('JSON response does not have the expected structure');
-            // Handle unstructured JSON here (e.g., try to extract useful information)
-            finalComparativeResponse = { unstructured: jsonResponse };
-        } else {
-            console.error('Failed to parse jsonResponse into a valid JSON object');
-            // Handle non-JSON response here (e.g., use the raw response as is)
-            finalComparativeResponse = { raw: selectedModelApiResponse };
         }
 
         console.log('Final Comparative Response:', finalComparativeResponse);
@@ -485,20 +331,21 @@ export async function POST({ request }) {
 
         const alternativeResultsArray = Array.from(alternativeResults);
         const alternativeResultsString = alternativeResultsArray.join(', ');
+        let finalFinalElement
 
-        const finalFinalPrompt = `
-            For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination; giving a logical and/or concrete answer; and the answer will provide the most semantic weight, commonality, and distinctive meaning to best facilitate further combinations.
+        // const finalFinalPrompt = `
+        //     For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination; giving a logical and/or concrete answer; and the answer will provide the most semantic weight, commonality, and distinctive meaning to best facilitate further combinations.
 
-            ${alternativeResultsString}.
-            Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
-        `
+        //     ${alternativeResultsString}.
+        //     Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
+        // `
 
-        const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
-        console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
+        // finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
+        // console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
 
         // Create the new element object
         const newElement = {
-            name: finalFinalElement || bestResult || `${element1}-${element2}`,
+            name: finalFinalElement || bestResult,
             finalComparativeResponse: finalComparativeResponse,
             reason: reason,
             parents: [element1, element2],
@@ -519,20 +366,6 @@ export async function POST({ request }) {
     }
 }
 
-function parseAndFormatResult(result) {
-    const parts = result.replace('+', ',').replace('=', ',').split(',');
-    // console.log(`🚀 ~ parseAndFormatResult ~ parts:`, parts)
-    const formattedResult = parts[parts.length - 1].trim();
-    // console.log(`🚀 ~ parseAndFormatResult ~ formattedResult:`, formattedResult)
-    return formattedResult.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-}
-
-function extractJSON(text) {
-    // console.log(`🚀 ~ extractJSON ~ text:`, text)
-    const match = text.match(/```json\n([\s\S]*?)\n```/);
-    // console.log(`🚀 ~ extractJSON ~ match:`, match)
-    return match ? match[1] : text;
-}
 
 function formatResult(result) {
     const parts = result.split(/[+=]/);
