@@ -10,9 +10,15 @@
 
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 
+<<<<<<< HEAD
+<div class="container h-full mx-auto flex justify-center items-center flex-col">
+	<div class="p-8 flex items-center justify-center">
+		<h1 class="p-4 h1 m-8">Elemental Craft</h1>
+=======
 <div id="app-main" class="container h-screen mx-auto grid justify-center items-center flex-col">
 	<div class=" flex items-center justify-center">
 		<h1 class="h1">Elemental Craft</h1>
+>>>>>>> bdc299c76e5816ced92a1f2e7ce9f94a87738596
 		<!-- <p>Start by exploring themes:</p>
 		<ThemeSelector /> -->
 	</div>
