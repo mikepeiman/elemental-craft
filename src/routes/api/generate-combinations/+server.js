@@ -223,10 +223,10 @@ const defaultParams = {
     presence_penalty: 0.5,
 
     // repetition_penalty: 0.0 to 2.0 (Default: 1.0) - Higher values reduce repetition
-    // repetition_penalty: 1.2,
+    repetition_penalty: 1.2,
 
     // min_p: 0.0 to 1.0 (Default: 0.0) - Minimum probability for token consideration
-    // min_p: 0.05,
+    min_p: 0.05,
 
     // top_a: 0.0 to 1.0 (Default: 0.0) - Dynamic token filtering based on highest probability
     // top_a: 0.2,
@@ -247,10 +247,10 @@ const defaultParams = {
     // logprobs: true,
 
     // top_logprobs: 0 to 20 - Number of most likely tokens to return at each position
-    // top_logprobs: 5,
+    top_logprobs: 5,
 
     // response_format: object - Forces specific output format
-    // response_format: { "type": "json_object" },
+    response_format: { "type": "json_object" },
 
     // tools: array - For tool-calling functionality
     // tools: [{ "type": "function", "function": { "name": "get_current_weather", "parameters": { ... } } }],
@@ -308,22 +308,6 @@ async function generateCompletion(prompt, modelName, params = defaultParams) {
 
 let results = [];
 
-// const prompt = `
-// You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
-
-// Combine "${element1}" and "${element2}" into a thing (a noun).
-// Consider also the inverse combination "${element2}" and "${element1}".
-
-// Your entire response should be just the new noun combination, nothing else. 
-// If response is two or three words, it can contain an adverb.
-// No articles like "a", "the".
-
-// Good examples of combinations and results:
-// ${goodExamples}
-
-// Pick the result that is most semantically logical and sound.
-// REMEMBER: 1 to 3 words ONLY. No explanations. No additional text.`;
-
 const responseFormatJson = `
 {
 "mostLogical": {
@@ -350,7 +334,7 @@ const responseFormatJson = `
 
 const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
 
-    return `You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing).
+    return `You are a creative assistant that combines items in semantically logical ways to produce a combination that is a noun (a thing) - but you aim to produce unexpected results that make intuitive sense to humans based on metaphoric, poetic, and cultural references.
 
     Combine "${element1}" and "${element2}".
     Consider also the inverse combination "${element2}" and "${element1}".
@@ -363,102 +347,91 @@ const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
     Include an explanation in the "explanation" field of the response object.`
 }
 
-// const evaluationPrompt_1 = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}") select the best one based on creativity, relevance, and adherence to the rules:
-
-// ${selectedModelApiResponse}
-
-// Rules for selection:
-// 1. The chosen combination must be 1 to 3 words only.
-// 2. It should be in Title Case (capitalize first letter of each word).
-// 3. It must not contain any punctuation.
-// 4. It must be a noun.
-// 5. It should have a clear logical connection to both "${element1}" and "${element2}".
-
-// Provide your response of 1-3 words in Capital Case with absolutely nothing else included.`;
-
-
-
-// const evaluationPrompt = `Given the following combinations of "${element1}" and "${element2}", (consider also the inverse combination "${element2}" and "${element1}")
-
-// Here are the results of multiple models processing that combination:
-// ${jsonResponse}
-// After considering the preceding varied results, conduct a final evaluation that analyzes and categorizes the outputs. Structure the evaluation results in a JSON format as follows:
-// ${responseFormatJson}
-// limit reasons given to 50-100 words max
-// }`;
-
 let responseIsJson = true
+let isStructuredJson = false;
 function extractJsonFromResponse(response) {
     console.log(`🚀 ~ response:`, response);
 
-    // If response is already an object, return it
+    let parsedResponse = response;
+    let responseIsJson = false;
+
     if (typeof response === 'object' && response !== null) {
-        return response;
-    }
-
-    // If response is a string, try to extract JSON from it
-    if (typeof response === 'string') {
+        parsedResponse = response;
+        responseIsJson = true;
+        isStructuredJson = true;
+    } else if (typeof response === 'string') {
         const jsonStartIndex = response.indexOf('{');
-        let jsonEndIndex = response.lastIndexOf('}');
-
-        if (jsonStartIndex !== -1) {
-            let jsonSubstring = response.substring(jsonStartIndex);
-
-            // Count opening and closing braces
-            let openBraces = (jsonSubstring.match(/{/g) || []).length;
-            let closeBraces = (jsonSubstring.match(/}/g) || []).length;
-
-            // Add missing closing braces if necessary
-            while (openBraces > closeBraces) {
-                jsonSubstring += '}';
-                closeBraces++;
-            }
-
-            console.log(`🚀 ~ jsonSubstring:`, jsonSubstring);
+        const jsonEndIndex = response.lastIndexOf('}');
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+            let jsonSubstring = response.substring(jsonStartIndex, jsonEndIndex + 1);
 
             try {
-                return JSON.parse(jsonSubstring);
+                parsedResponse = JSON.parse(jsonSubstring);
+                responseIsJson = true;
+
+                isStructuredJson = Object.values(parsedResponse).every(value =>
+                    typeof value === 'object' && 'result' in value && 'explanation' in value
+                );
             } catch (error) {
                 console.error('Error parsing JSON:', error);
-                // If parsing still fails, try to fix common issues
-                jsonSubstring = jsonSubstring.replace(/,\s*}/g, '}'); // Remove trailing commas
+                // If parsing fails, try to fix common issues
+                jsonSubstring = jsonSubstring.replace(/,\s*}/g, '}').replace(/\n/g, '\\n'); // Remove trailing commas and escape newlines
                 try {
-                    return JSON.parse(jsonSubstring);
+                    parsedResponse = JSON.parse(jsonSubstring);
+                    responseIsJson = true;
+
+                    isStructuredJson = Object.values(parsedResponse).every(value =>
+                        typeof value === 'object' && 'result' in value && 'explanation' in value
+                    );
                 } catch (error) {
                     console.error('Error parsing JSON after attempted fix:', error);
-                    // If parsing fails again, return the original response
-                    return response;
+                    // If parsing fails again, leave parsedResponse as the original string
                 }
             }
         } else {
             console.log('No valid JSON object found in the response string');
-            return response;
         }
+    } else {
+        console.log('Response is neither an object nor a string');
     }
 
-    // If response is neither an object nor a string, return it as is
-    console.log('Response is neither an object nor a string');
-    responseIsJson = false
-    return response;
+    return { parsedResponse, responseIsJson, isStructuredJson };
 }
-
-
 let selectedModelApiResponse = {}
 let jsonResponse
+let finalComparativeResponse = {};
 export async function POST({ request }) {
     try {
         const { element1, element2, modelName } = await request.json();
 
         let prompt = singleModelMultiPrompt(element1, element2, responseFormatJson)
+        let selectedModelApiResponse;
+        let jsonResponse;
+        let results = [];
 
         try {
             selectedModelApiResponse = await generateCompletion(prompt, modelName, { max_tokens: 3000 });
-            // console.log(`🚀 ~ POST ~ result:`, selectedModelApiResponse)
             if (selectedModelApiResponse !== null) {
                 results.push({ model: modelName, combination: selectedModelApiResponse, success: true, error: null });
                 console.log(`🚀 ~ POST ${modelName} ~ selectedModelApiResponse after generateCompletion:`, selectedModelApiResponse);
                 addApiResponse(modelName, selectedModelApiResponse)
-                jsonResponse = extractJsonFromResponse(selectedModelApiResponse)
+                const { parsedResponse, responseIsJson, isStructuredJson } = extractJsonFromResponse(selectedModelApiResponse);
+
+                if (responseIsJson && isStructuredJson) {
+                    jsonResponse = parsedResponse;
+                    for (const [category, content] of Object.entries(jsonResponse)) {
+                        finalComparativeResponse[category] = {
+                            result: content.result,
+                            explanation: content.explanation
+                        };
+                    }
+                } else if (responseIsJson) {
+                    console.error('JSON response does not have the expected structure');
+                    finalComparativeResponse = { unstructured: parsedResponse };
+                } else {
+                    console.error('Failed to parse response into a valid JSON object');
+                    finalComparativeResponse = { raw: selectedModelApiResponse };
+                }
             } else {
                 throw new Error('Null selectedModelApiResponse returned from generateCompletion');
             }
@@ -469,70 +442,49 @@ export async function POST({ request }) {
 
 
 
-        let finalComparativeResponse = {};
-
-        if (responseIsJson) {
+        if (responseIsJson && isStructuredJson) {
             try {
                 for (const [category, content] of Object.entries(jsonResponse)) {
-                    console.log(`🚀 ~ POST ~ content:`, content);
-                    console.log(`🚀 ~ POST ~ category:`, category);
-                    if (content && typeof content === 'object' && 'result' in content && 'explanation' in content) {
-                        finalComparativeResponse[category] = {
-                            result: content.result,
-                            explanation: content.explanation
-                        };
-                    } else {
-                        console.error(`Invalid content structure for category: ${category}`);
-                    }
+                    finalComparativeResponse[category] = {
+                        result: content.result,
+                        explanation: content.explanation
+                    };
                 }
             } catch (error) {
                 console.error('Error processing jsonResponse:', error);
             }
+        } else if (responseIsJson) {
+            console.error('JSON response does not have the expected structure');
+            // Handle unstructured JSON here (e.g., try to extract useful information)
+            finalComparativeResponse = { unstructured: jsonResponse };
         } else {
             console.error('Failed to parse jsonResponse into a valid JSON object');
+            // Handle non-JSON response here (e.g., use the raw response as is)
+            finalComparativeResponse = { raw: selectedModelApiResponse };
         }
 
         console.log('Final Comparative Response:', finalComparativeResponse);
-        console.log(`finalComparativeResponse:`, finalComparativeResponse);
 
-
-        // const reasonPrompt = `Given the combination of "${element1}" + "${element2}" = "${jsonResult}", explain the reasoning for why this is a good, sensible, semantic combination. Keep your explanation within 50-200 words. Issue your reasoning simply, without preamble. Use an enumerated list if appropriate. Use full sentences, but be concise.`
-
-
-
-        // const finalReason = await generateCompletion(reasonPrompt, finalModel, { max_tokens: 300 });
-        // console.log(`🚀 ~ POST ~ finalReason:`, finalReason)
-
-        // reason = finalReason
         let reason = "no reason given"
 
-        // Process finalComparativeResponse
-
-        // for (const category in finalComparativeResponse) {
-        //     finalComparativeResponse[category].result = formatResult(finalComparativeResponse[category].result);
-        // }
-
-
-        // 2. & 3. Add alternativeResults and assign best result
         const alternativeResults = new Set();
         let bestResult = '';
-        let highestScore = -1;
 
-        console.log(`finalComparativeResponse:`, finalComparativeResponse);
         for (const category in finalComparativeResponse) {
-            const result = formatResult(finalComparativeResponse[category].result)
-            const explanation = finalComparativeResponse[category].explanation;
-            alternativeResults.add(result);
-            // Assuming 'mostLogical' is the best result, you can change this criteria
-            if (category === 'mostLogical') {
-                bestResult = result;
-                reason = explanation
+            if (finalComparativeResponse[category] && finalComparativeResponse[category].result) {
+                const result = formatResult(finalComparativeResponse[category].result)
+                const explanation = finalComparativeResponse[category].explanation;
+                alternativeResults.add(result);
+                // Assuming 'mostLogical' is the best result, you can change this criteria
+                if (category === 'mostLogical') {
+                    bestResult = result;
+                    reason = explanation || reason;
+                }
             }
         }
 
         const alternativeResultsArray = Array.from(alternativeResults);
         const alternativeResultsString = alternativeResultsArray.join(', ');
-
 
         const finalFinalPrompt = `
             For any of the following combinations of "${element1}" and "${element2}", select the best one based on meaningful combination; giving a logical and/or concrete answer; and the answer will provide the most semantic weight, commonality, and distinctive meaning to best facilitate further combinations.
@@ -540,14 +492,13 @@ export async function POST({ request }) {
             ${alternativeResultsString}.
             Respond with ONLY A 1-3 WORD NOUN or ADVERB-NOUN PHRASE.
         `
-        // console.log(`🚀 ~ POST ~ finalFinalPrompt:`, finalFinalPrompt)
 
         const finalFinalElement = await generateCompletion(finalFinalPrompt, comparativeModel, { max_tokens: 10 });
         console.log(`🚀 ~ POST ~ finalFinalElement:`, finalFinalElement)
 
         // Create the new element object
         const newElement = {
-            name: finalFinalElement || bestResult,
+            name: finalFinalElement || bestResult || `${element1}-${element2}`,
             finalComparativeResponse: finalComparativeResponse,
             reason: reason,
             parents: [element1, element2],
@@ -558,13 +509,13 @@ export async function POST({ request }) {
 
         // Return a proper Response object
         return json({
-            allResults: results || result,
+            allResults: results,
             newElement: newElement
         });
     } catch (error) {
         console.error('Error in POST handler:', error);
         // Return a proper Response object even in case of an error
-        return json({ allResults: results || result, error: 'Failed to generate combinations', details: error.message }, { status: 500 });
+        return json({ allResults: [], error: 'Failed to generate combinations', details: error.message }, { status: 500 });
     }
 }
 
