@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { draggable } from '@neodrag/svelte';
+	import { generateDescriptiveJson } from '$utils/descriptiveJson';
 
 	import {
 		elements,
@@ -47,7 +48,100 @@
 	let randomCombinationCount = 5;
 	let isGenerating = false;
 
-	onMount(() => {
+	async function generateCompletion(prompt, modelName, params = defaultParams) {
+		try {
+			const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+					'HTTP-Referer': YOUR_SITE_URL,
+					'X-Title': YOUR_SITE_NAME,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					model: modelName,
+					messages: [{ role: 'user', content: prompt }],
+					...params
+				})
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+
+				throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+			}
+
+			const data = await response.json();
+			// console.log(`🚀 ~ generateCompletion for an individual model\n ${modelName}\n  ~ data:`, data); // Log the entire response
+			addApiResponse(modelName, {
+				type: 'success',
+				response: data,
+				timestamp: new Date().toISOString()
+			});
+
+			if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
+				throw new Error('Unexpected API response structure');
+			}
+
+			let msg = data.choices[0].message.content.trim();
+			// console.log(`🚀 ~ generateCompletion  for an individual model ${modelName}  ~ msg:`, msg)
+			return msg;
+		} catch (error) {
+			console.error('Error in generateCompletion:', error);
+			return null; // Return null instead of throwing the error
+		}
+	}
+
+	let results = [];
+
+	const responseFormatJson = `
+{
+"mostLogical": {
+"result": "string",
+"explanation": "string"
+},
+"mostConcrete": {
+"result": "string",
+"explanation": "string"
+},
+"mostCreative": {
+"result": "string",
+"explanation": "string"
+},
+"mostRelevant": {
+"result": "string",
+"explanation": "string"
+},
+"mostMeaningful": {
+"result": "string",
+"explanation": "string"
+},
+"mostPoetic": {
+"result": "string",
+"explanation": "string"
+},
+"mostPopularCulture": {
+"result": "string",
+"explanation": "string"
+},
+"mostTraditional": {
+"result": "string",
+"explanation": "string"
+},
+"mostInsightful": {
+"result": "string",
+"explanation": "string"
+},
+`;
+
+	// Generate and log the result
+
+	onMount(async () => {
+		const descriptorsAndCombinations = await generateDescriptiveJson();
+		console.log(
+			`descriptorsAndCombinations: `,
+			JSON.stringify(descriptorsAndCombinations, null, 2)
+		);
 		// mainArea = document.getElementById('main-area');
 		initializeNextId($dragElements);
 		console.log('🚀 ~ onMount ~ Component mounted');

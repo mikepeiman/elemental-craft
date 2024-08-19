@@ -42,6 +42,7 @@
     "dotenv": "^16.4.5",
     "jsonrepair": "^3.8.0",
     "openai": "^4.55.7",
-    "pocketbase": "^0.21.4"
+    "pocketbase": "^0.21.4",
+    "unplugin-icons": "^0.19.2"
   }
 }

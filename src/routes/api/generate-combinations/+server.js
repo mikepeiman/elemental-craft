@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import dotenv from 'dotenv';
 import { addApiResponse, addServerResponse } from '$lib/stores.js'
 import { jsonrepair } from 'jsonrepair'
+import { generateDescriptiveJson } from '@/utils/descriptiveJson';
 
 dotenv.config();
 
@@ -10,6 +11,7 @@ const YOUR_SITE_URL = process.env.YOUR_SITE_URL;
 const YOUR_SITE_NAME = process.env.YOUR_SITE_NAME;
 const comparativeModel = "openai/chatgpt-4o-latest"
 
+const descriptorsAndCombinations = await generateDescriptiveJson();
 const defaultParams = {
     // temperature: 0.0 to 2.0 (Default: 1.0) - Higher values increase randomness
     temperature: 0.7,
@@ -64,7 +66,7 @@ const defaultParams = {
 };
 
 async function generateCompletion(prompt, modelName, params = defaultParams) {
-
+    console.log(`🚀 ~ generateCompletion ~ descriptorsAndCombinations:`, descriptorsAndCombinations)
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -130,51 +132,29 @@ const responseFormatJson = `
   "result": "string",
   "explanation": "string"
 },
-"mostDescriptive": {
+"mostMeaningful": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostPoetic": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostPopularCulture": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostTraditional": {
+  "result": "string",
+  "explanation": "string"
+},
+"mostInsightful": {
   "result": "string",
   "explanation": "string"
 },
 `
 
-function generateDescriptorsAndCombinations() {
-    const descriptors = [
-        'concrete',
-        'logical',
-        'relevant',
-        'meaningful',
-        'poetic',
-        'creative',
-        'popular culture',
-        'traditional'
-    ];
-
-    const result = {};
-
-    // Add individual descriptors
-    descriptors.forEach(descriptor => {
-        result[descriptor] = {
-            result: "",
-            explanation: ""
-        };
-    });
-
-    // Generate combinations
-    for (let i = 0; i < descriptors.length; i++) {
-        for (let j = i + 1; j < descriptors.length; j++) {
-            const combination = `${descriptors[i]} + ${descriptors[j]}`;
-            result[combination] = {
-                result: "",
-                explanation: ""
-            };
-        }
-    }
-
-    return result;
-}
-
 // Generate and log the result
-const descriptorsAndCombinations = generateDescriptorsAndCombinations();
-console.log(JSON.stringify(descriptorsAndCombinations, null, 2));
 
 const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
 
@@ -193,9 +173,10 @@ const singleModelMultiPrompt = (element1, element2, responseFormatJson) => {
         'poetic',
         'creative',
         'popular culture',
-        'traditional'.
-        
-    Respond in a strict format based on the guiding property: ${descriptorsAndCombinations} 
+        'traditional',
+        'insightful'
+
+    Respond in a strict format based on the guiding property descriptor: ${descriptorsAndCombinations} 
     Note the qualitative selections in the response object which each possess the same two properties.
 
     Each result should be only the 1-3 word new combination string in the "result": "string" property,
@@ -220,15 +201,15 @@ function extractJsonFromResponse(response) {
         const jsonEndIndex = response.lastIndexOf('}');
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
             let jsonSubstring = response.substring(jsonStartIndex, jsonEndIndex + 1);
-            console.log(`🚀 ~ \n\nextractJsonFromResponse ~ jsonSubstring:\n\n`, jsonSubstring)
+            // console.log(`🚀 ~ \n\nextractJsonFromResponse ~ jsonSubstring:\n\n`, jsonSubstring)
             let repairedResponse = jsonrepair(jsonSubstring);
-            console.log(`🚀 ~ JSONREPAIRED extractJsonFromResponse ~ \n\n TYPEOF  ${typeof repairedResponse}:\n\n`, repairedResponse)
+            // console.log(`🚀 ~ JSONREPAIRED extractJsonFromResponse ~ \n\n TYPEOF  ${typeof repairedResponse}:\n\n`, repairedResponse)
 
             try {
                 // parsedResponse = JSON.parse(jsonSubstring);
                 // console.log(`🚀 ~ extractJsonFromResponse ~ \n\nparsedResponse NONREPAIRED ATTEMPT TYPEOF ${parsedResponse} :\n\n`, parsedResponse)
                 parsedResponse = JSON.parse(repairedResponse);
-                console.log(`🚀 ~ extractJsonFromResponse ~ \n\n parsedResponse REPAIRED ATTEMPT TYPEOF ${typeof parsedResponse}:\n\n`, parsedResponse)
+                // console.log(`🚀 ~ extractJsonFromResponse ~ \n\n parsedResponse REPAIRED ATTEMPT TYPEOF ${typeof parsedResponse}:\n\n`, parsedResponse)
                 responseIsJson = true;
 
                 // isStructuredJson = Object.values(parsedResponse).every(value => {
@@ -276,7 +257,7 @@ export async function POST({ request }) {
             selectedModelApiResponse = await generateCompletion(prompt, modelName, { max_tokens: 3000 });
             if (selectedModelApiResponse !== null) {
                 results.push({ model: modelName, combination: selectedModelApiResponse, success: true, error: null });
-                console.log(`🚀 ~\n\n POST ${modelName} ~ \n\nselectedModelApiResponse after generateCompletion:\n\n`, selectedModelApiResponse);
+                // console.log(`🚀 ~\n\n POST ${modelName} ~ \n\nselectedModelApiResponse after generateCompletion:\n\n`, selectedModelApiResponse);
                 addApiResponse(modelName, selectedModelApiResponse)
                 const { parsedResponse, responseIsJson, isStructuredJson } = extractJsonFromResponse(selectedModelApiResponse);
                 console.log(`🚀 ~ POST ~ parsedResponse, responseIsJson, isStructuredJson:`, parsedResponse, responseIsJson, isStructuredJson)
@@ -285,8 +266,8 @@ export async function POST({ request }) {
                     jsonResponse = parsedResponse;
                     let entries = Object.entries(jsonResponse)
                     let keys = Object.keys(jsonResponse)
-                    console.log(`🚀 ~ POST ~ keys:`, keys)
-                    console.log(`🚀 ~ POST ~ entries:`, entries)
+                    // console.log(`🚀 ~ POST ~ keys:`, keys)
+                    // console.log(`🚀 ~ POST ~ entries:`, entries)
                     for (const [category, content] of entries) {
                         console.log(`🚀 ~ POST ~ category, content:`, category, content)
                         finalComparativeResponse[category] = {
@@ -309,7 +290,7 @@ export async function POST({ request }) {
             console.error(`🚀 ~ POST ${modelName} ~ Failed to generate combination:`, error);
         }
 
-        console.log('Final Comparative Response:', finalComparativeResponse);
+        // console.log('Final Comparative Response:', finalComparativeResponse);
 
         let reason = "no reason given"
 
